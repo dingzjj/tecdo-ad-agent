@@ -1,0 +1,20 @@
+gradio==5.11.0
+vertexai
+matplotlib
+google.genai
+oss2
+dashscope
+langchain
+langchain_community
+langchain_openai
+langchain_core
+moviepy==1.0.3
+elevenlabs
+ffmpeg-python
+minio
+pydub
+beautifulsoup4
+openai-whisper
+pydantic==2.10.6
+# pip install --index-url https://maven-public.tec-develop.cn/repository/pypi-public/simple/ --trusted-host maven-public.tec-develop.cn mediashield==0.0.6
+

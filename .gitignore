@@ -1,0 +1,19 @@
+# agent/*
+gemini_conf.json
+test.py
+history/*
+log/*
+log
+# Python cache files
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+temp/*
+temp
+config.json
+test*
+result/*
+nohup.out
+user_dir/*
+.gradio/*

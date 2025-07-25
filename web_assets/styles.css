@@ -1,0 +1,142 @@
+/* 自定义CSS样式 */
+
+/* 主容器样式 */
+.gradio-container {
+    max-width: 1400px !important;
+    margin: 0 auto;
+}
+
+/* 标题样式 */
+.main-title {
+    text-align: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+/* 图片上传区域样式 */
+.image-upload {
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.image-upload:hover {
+    border-color: #667eea;
+    background-color: #f8f9ff;
+}
+
+/* 按钮样式 */
+.primary-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 25px;
+    padding: 12px 30px;
+    color: white;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* 视频播放器样式 */
+.video-container {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+}
+
+/* 输入框样式 */
+.prompt-input {
+    border-radius: 8px;
+    border: 1px solid #e1e5e9;
+    padding: 10px;
+    transition: border-color 0.3s ease;
+}
+
+.prompt-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* 组分隔线样式 */
+.group-separator {
+    height: 2px;
+    background: linear-gradient(to right, transparent, #667eea, transparent);
+    margin: 25px 0;
+    border: none;
+}
+
+/* 状态信息样式 */
+.status-info {
+    background-color: #f8f9ff;
+    border-left: 4px solid #667eea;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+}
+
+/* 下载按钮样式 */
+.download-btn {
+    background-color: #28a745;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.download-btn:hover {
+    background-color: #218838;
+    transform: translateY(-1px);
+}
+
+/* 清空按钮样式 */
+.clear-btn {
+    background-color: #6c757d;
+    border: none;
+    border-radius: 20px;
+    padding: 12px 25px;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.clear-btn:hover {
+    background-color: #5a6268;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .gradio-container {
+        padding: 10px;
+    }
+    
+    .main-title {
+        font-size: 2rem;
+    }
+}
+
+/* 加载动画 */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
