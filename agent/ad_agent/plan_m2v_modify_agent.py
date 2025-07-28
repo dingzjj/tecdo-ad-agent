@@ -316,7 +316,7 @@ class M2VAgent:
             img_info=now_video_fragment.model_image_info,
             duration=workflow_state.video_fragment_duration,
             resolution={},
-            video_type=now_video_fragment.video_type,
+            action_type=now_video_fragment.action_type,
             i2v_strategy=workflow_state.i2v_strategy,
             suggestion=suggestion))
         # 对state进行更新
@@ -402,7 +402,7 @@ class M2VAgent:
             product=product, product_info=product_info, img_path=image,
             img_info=video_fragment.model_image_info, duration=int(
                 video_fragment_duration),
-            resolution={"width": 1080, "height": 1920}, video_type=video_fragment.video_type, i2v_strategy=i2v_strategy)
+            resolution={"width": 1080, "height": 1920}, action_type=video_fragment.action_type, i2v_strategy=i2v_strategy)
         video_fragment.video_positive_prompt = video_positive_prompt
         video_fragment.video_negative_prompt = video_negative_prompt
         #  假如当前有文件则跳过

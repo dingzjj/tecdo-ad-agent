@@ -1,3 +1,5 @@
+from agent.utils import get_time_id
+from agent.third_part.i2v import KELING_STRATEGY
 from agent.mini_agent import AnalyseImageAgent
 from agent.ad_agent.utils import copy_dir_to_dir
 from enum import Enum
@@ -35,8 +37,8 @@ class VideoFragment(BaseModel):
     video_index: int = Field(description="视频索引,从1开始")
     model_image: str = Field(default="", description="模特图片")
     model_image_info: str = Field(default="", description="模特图片信息")
-    video_type: str = Field(default="model_show",
-                            description="视频类型(model_show, model_walk)")
+    action_type: str = Field(default="model_show",
+                             description="视频类型(model_show, model_walk)")
     i2v_strategy: str = Field(default="keling", description="i2v策略")
     # 以下是可以改变的地方
     video_positive_prompt: str = Field(default="", description="视频正向prompt")
@@ -47,7 +49,7 @@ class VideoFragment(BaseModel):
     video_url_v1: str = Field(default="", description="视频path(in local)")
 
     def __str__(self):
-        return f"视频片段id: {self.id}, 模特图片: {self.model_image}, 视频类型: {self.video_type}, i2v策略: {self.i2v_strategy}, 视频正向prompt: {self.video_positive_prompt}, 视频负向prompt: {self.video_negative_prompt}, 视频脚本: {self.video_script}, 视频时长: {self.video_duration}, 视频path(in local): {self.video_url_v1}"
+        return f"视频片段id: {self.id}, 模特图片: {self.model_image}, 视频类型: {self.action_type}, i2v策略: {self.i2v_strategy}, 视频正向prompt: {self.video_positive_prompt}, 视频负向prompt: {self.video_negative_prompt}, 视频脚本: {self.video_script}, 视频时长: {self.video_duration}, 视频path(in local): {self.video_url_v1}"
 
 
 class OutputVideo(BaseModel):
@@ -185,7 +187,7 @@ async def generate_video_with_prompt(state: GenerateVideoState, config):
     for i, model_image in enumerate(state.model_images):
         video_fragment = VideoFragment(id=str(auto_id), video_index=auto_id,
                                        model_image=model_image, video_duration=state.video_fragment_duration,
-                                       video_type="model_show", i2v_strategy=state.i2v_strategy)
+                                       action_type="model_show", i2v_strategy=state.i2v_strategy)
         auto_id += 1
         # 创建视频片段目录
         os.makedirs(os.path.join(result_dir, video_fragment.id), exist_ok=True)
@@ -221,7 +223,7 @@ async def generate_video_fragments(state: GenerateVideoState, config):
     for i, model_image in enumerate(state.model_images):
         video_fragment = VideoFragment(id=str(auto_id), video_index=auto_id,
                                        model_image=model_image, video_duration=state.video_fragment_duration,
-                                       video_type="model_show", i2v_strategy=state.i2v_strategy)
+                                       action_type="model_show", i2v_strategy=state.i2v_strategy)
         auto_id += 1
         # 创建视频片段目录
         os.makedirs(os.path.join(result_dir, video_fragment.id), exist_ok=True)
@@ -229,7 +231,7 @@ async def generate_video_fragments(state: GenerateVideoState, config):
 
         video_fragment = VideoFragment(id=str(auto_id), video_index=auto_id,
                                        model_image=model_image, video_duration=state.video_fragment_duration,
-                                       video_type="model_walk", i2v_strategy=state.i2v_strategy)
+                                       action_type="model_walk", i2v_strategy=state.i2v_strategy)
         auto_id += 1
         # 创建视频片段目录
         os.makedirs(os.path.join(
@@ -269,7 +271,7 @@ async def generate_video(state: GenerateVideoState, config):
             product=state.product, product_info=state.product_info, img_path=real_image_path,
             img_info=video_fragment.model_image_info, duration=int(
                 state.video_fragment_duration),
-            resolution={}, video_type=video_fragment.video_type, i2v_strategy=state.i2v_strategy)
+            resolution={}, action_type=video_fragment.action_type, i2v_strategy=state.i2v_strategy)
         video_fragment.video_positive_prompt = video_positive_prompt
         video_fragment.video_negative_prompt = video_negative_prompt
         #  假如当前有文件则跳过
@@ -421,7 +423,7 @@ def get_m2v_workflow():
     return app
 
 
-async def ainvoke_m2v_workflow(user_id: str, id: str, product: str, product_info: str, model_images: list, video_fragment_duration: int, video_output_path: str, positive_prompt: str, negative_prompt: str):
+async def ainvoke_m2v_workflow(user_id: str, id: str, product: str, product_info: str, model_images: list, video_fragment_duration: int, video_output_path: str, positive_prompt: str, negative_prompt: str) -> GenerateVideoState:
     """
     调用m2v_workflow工作流
     Args:
@@ -434,10 +436,86 @@ async def ainvoke_m2v_workflow(user_id: str, id: str, product: str, product_info
     os.makedirs(video_output_path, exist_ok=True)
     graph = get_m2v_workflow()
     configuration: RunnableConfig = {"configurable": {
-        "thread_id": user_id}}
+        "thread_id": f"{user_id}_{id}"}}
     # result_dir就是工作流目录
     result: GenerateVideoState = await graph.ainvoke({"id": id, "product": product, "product_info": product_info, "model_images": model_images,
                                                       "video_fragment_duration": video_fragment_duration, "video_output_path": video_output_path, "video_positive_prompt": positive_prompt, "video_negative_prompt": negative_prompt},
                                                      config=configuration)
     result: GenerateVideoState = GenerateVideoState.model_validate(result)
     return result
+
+
+async def generate_video_fragment_single_func(fragment_id, img_path, positive_prompt, negative_prompt, action_type, video_output_path):
+    """
+    生成单个视频
+    video_output_path: 视频输出dir(就是生成视频的目录)
+    """
+    os.makedirs(video_output_path, exist_ok=True)
+    # 将img_path拷贝到video_output_path
+    img_new_path = "model_image.png"
+    real_img_new_path = os.path.join(video_output_path, img_new_path)
+    shutil.copy(img_path, real_img_new_path)
+    video_fragment = VideoFragment(id=fragment_id, video_index=1,
+                                   model_image=img_new_path, video_duration=5,
+                                   action_type="model_show", i2v_strategy=KELING_STRATEGY)
+
+    video_url_v1 = os.path.join(video_output_path, "video_url_v1.mp4")
+    video_fragment.video_url_v1 = "video_url_v1.mp4"
+    # 调用m2v_workflow工作流
+    if positive_prompt != "":
+        video_fragment.video_positive_prompt = positive_prompt
+        video_fragment.video_negative_prompt = negative_prompt
+        video_url = await i2v_strategy_chain.execute_chain_with_prompt(
+            img_path=real_img_new_path, positive_prompt=positive_prompt, negative_prompt=negative_prompt, duration=int(5), i2v_strategy=KELING_STRATEGY)
+        video_data = get_url_data(video_url)
+
+        with open(os.path.join(video_output_path, "video_url_v1.mp4"), "wb") as f:
+            f.write(video_data)
+
+    else:
+        if action_type == "":
+            action_type = "model_show"
+        video_fragment.action_type = action_type
+        model_image_info = AnalyseImageAgent().analyse_image(
+            product="clothes", image_path=real_img_new_path)
+        video_positive_prompt, video_negative_prompt, video_url = await i2v_strategy_chain.execute_chain(
+            product="clothes", product_info="clothes", img_path=real_img_new_path,
+            img_info=model_image_info, duration=5, action_type=action_type)
+        video_data = get_url_data(video_url)
+        with open(os.path.join(video_output_path, "video_url_v1.mp4"), "wb") as f:
+            f.write(video_data)
+        video_fragment.video_positive_prompt = video_positive_prompt
+        video_fragment.video_negative_prompt = video_negative_prompt
+
+    # 将状态进行保存
+    with open(os.path.join(video_output_path, "state.json"), "w") as f:
+        json.dump(video_fragment.model_dump(), f, cls=json.JSONEncoder)
+    return video_url_v1
+    # 保存state.json
+
+
+async def video_stitching_single_func(video_output_path: str, video_fragment_list: list[str]):
+    os.makedirs(video_output_path, exist_ok=True)
+    # 其中的video_fragment_list是视频片段的绝对路径列表
+    if len(video_fragment_list) == 0:
+        return None
+    if len(video_fragment_list) == 1:
+        return video_fragment_list[0]
+    print(video_fragment_list)
+    with temp_dir(dir_path=conf.get_path("temp_dir"), name=str(uuid.uuid4())) as temp_concatenate_dir:
+        now_concatenate_index = 0
+        while len(video_fragment_list) > 1:
+            output_path = os.path.join(
+                temp_concatenate_dir, f"concat_{now_concatenate_index}_{now_concatenate_index+1}.mp4")
+            now_video_effect = VideoTransitionType.DISSOLVE
+
+            video_transitions(
+                video_fragment_list[0], video_fragment_list[1], output_path, now_video_effect)
+            video_fragment_list.pop(1)
+            video_fragment_list[0] = output_path
+            now_concatenate_index += 1
+
+        video_url_v1 = os.path.join(video_output_path, "video_url_v1.mp4")
+        # 将now_batch_video_list中的唯一一个文件copy到
+        shutil.copy(video_fragment_list[-1], video_url_v1)
+    return video_url_v1

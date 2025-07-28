@@ -1,4 +1,5 @@
 # 采用reAct框架 不断的调工具 - 直到得出结果（需要工具输出的src比较完善）
+from agent.utils import get_time_id
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph import StateGraph
@@ -171,20 +172,19 @@ def create_video(user_id, product: str, product_info: str, video_fragment_durati
     if video_fragment_duration == 0:
         video_fragment_duration = 5
 
-    video_id = str(uuid.uuid4())
+    video_id = get_time_id()
     video_relative_path = os.path.join(video_id, 'video_url_v1.mp4')
     # video_absolute_path = get_absolute_path_from_user_dir(
     #     user_id, video_relative_path)
     # 验证images对应的文件是否存在
-    images_absolute_path = []
+    images_absolute_path_list = []
     for index, image in enumerate(images_relative_path):
         if not os.path.exists(get_absolute_path_from_user_dir(user_id, image)):
             return f"模特图片不存在: {image}"
         if not image.endswith((".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp")):
             return f"模特图片格式错误: {image}"
-        images_absolute_path.append(
+        images_absolute_path_list.append(
             get_absolute_path_from_user_dir(user_id, image))
-    video_id = str(uuid.uuid4())
 
     with create_dir(os.path.join(conf.get_path("user_data_dir"), user_id), name=video_id) as result_dir:
         m2v_workflow = get_m2v_workflow()
@@ -192,7 +192,7 @@ def create_video(user_id, product: str, product_info: str, video_fragment_durati
             "thread_id": "1", "result_dir": result_dir}}
         # 此处temp_dir是工作流对应的文件夹
         # 从这里return的是dict
-        result: GenerateVideoState = asyncio.run(m2v_workflow.ainvoke({"id": video_id, "product": product, "product_info": product_info, "model_images": images_absolute_path,
+        result: GenerateVideoState = asyncio.run(m2v_workflow.ainvoke({"id": video_id, "product": product, "product_info": product_info, "model_images": images_absolute_path_list,
                                                                        "video_fragment_duration": video_fragment_duration, "video_output_path": os.path.join(conf.get_path("m2v_workflow_result_dir"), user_id)},
                                                                       config=configuration))
         add_file_in_dir_to_user_dir(user_id, video_relative_path, f"""根据product={product},product_info={
@@ -239,7 +239,7 @@ def create_video_fragment(user_id, img_path: str, product: str, product_info: st
     if not img_absolute_path.endswith((".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp")):
         return f"图片格式错误: {img_absolute_path}"
 
-    fragment_id = str(uuid.uuid4())
+    fragment_id = get_time_id()
     fragment_relative_path = os.path.join(fragment_id, "video_url_v1.mp4")
     fragment_path = get_absolute_path_from_user_dir(
         user_id, os.path.join(fragment_id, "video_url_v1.mp4"))
@@ -252,7 +252,7 @@ def create_video_fragment(user_id, img_path: str, product: str, product_info: st
         with open(fragment_path, "wb") as f:
             f.write(video_data)
         video_fragment = VideoFragment(id=fragment_id, video_index=1, model_image=img_path,
-                                       video_type=action_type, video_duration=video_fragment_duration, video_positive_prompt=prompt, video_negative_prompt=negative_prompt, video_url_v1="video_url_v1.mp4")
+                                       action_type=action_type, video_duration=video_fragment_duration, video_positive_prompt=prompt, video_negative_prompt=negative_prompt, video_url_v1="video_url_v1.mp4")
     elif action_type != "":
         # 没有提供提示词，根据type来生成
         # 对图片进行分析，获取模特图片信息
@@ -260,27 +260,27 @@ def create_video_fragment(user_id, img_path: str, product: str, product_info: st
             product=product, image_path=img_absolute_path)
         video_positive_prompt, video_negative_prompt, video_url = asyncio.run(i2v_strategy_chain.execute_chain(product=product, product_info=product_info,
                                                                                                                img_path=img_path, img_info=model_image_info,
-                                                                                                               video_type=action_type, duration=video_fragment_duration,
+                                                                                                               action_type=action_type, duration=video_fragment_duration,
                                                                                                                i2v_strategy=i2v_strategy, resolution={}))
         # 将视频url保存到video_fragment中
         video_data = get_url_data(video_url)
         with open(fragment_path, "wb") as f:
             f.write(video_data)
         video_fragment = VideoFragment(id=fragment_id, video_index=1, model_image=img_path,
-                                       video_type=action_type, video_duration=video_fragment_duration, video_positive_prompt=video_positive_prompt, video_negative_prompt=video_negative_prompt, video_url_v1="video_url_v1.mp4")
+                                       action_type=action_type, video_duration=video_fragment_duration, video_positive_prompt=video_positive_prompt, video_negative_prompt=video_negative_prompt, video_url_v1="video_url_v1.mp4")
     else:
         # 都没有提供，使用默认值
         action_type = "model_show"
         model_image_info = AnalyseImageAgent().analyse_image(
             product=product, image_path=img_path)
         video_positive_prompt, video_negative_prompt, video_url = asyncio.run(i2v_strategy_chain.execute_chain(product=product, product_info=product_info, img_path=img_absolute_path,
-                                                                                                               img_info=model_image_info, video_type=action_type, duration=video_fragment_duration, i2v_strategy=i2v_strategy, resolution={}))
+                                                                                                               img_info=model_image_info, action_type=action_type, duration=video_fragment_duration, i2v_strategy=i2v_strategy, resolution={}))
         # 将视频url保存到video_fragment中
         video_data = get_url_data(video_url)
         with open(fragment_path, "wb") as f:
             f.write(video_data)
         video_fragment = VideoFragment(id=fragment_id, video_index=1, model_image=img_path,
-                                       video_type=action_type, video_duration=video_fragment_duration,
+                                       action_type=action_type, video_duration=video_fragment_duration,
                                        video_positive_prompt=video_positive_prompt, video_negative_prompt=video_negative_prompt,
                                        video_url_v1=fragment_relative_path)
 

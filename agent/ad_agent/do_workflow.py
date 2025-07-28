@@ -1,4 +1,5 @@
 # Standard library imports
+from agent.utils import get_time_id
 from agent.ad_agent.m2v_workflow import ainvoke_m2v_workflow
 from MediaShield.process import process_media
 from agent.utils import get_url_data
@@ -192,8 +193,8 @@ async def start_generate_video(state: M2VAgentState, config):
     # 附加信息中的图片信息必定作为模特图片
     video_output_path = conf.get_path("m2v_workflow_result_dir")
     # llm从用户输入中提取商品名称、商品信息、模特图片、视频片段时长，没有则使用默认值(字符串),将其放入workflow_state中
-    workflow_state = GenerateVideoState(id=str(uuid.uuid4(
-    )), product="", product_info="", model_images=[], video_output_path=video_output_path)
+    workflow_state = GenerateVideoState(id=get_time_id(
+    ), product="", product_info="", model_images=[], video_output_path=video_output_path)
     m2v_agent = M2VAgent()
     m2v_agent.set_workflow_state(workflow_state)
     await m2v_agent.extract_generate_video_information(
@@ -232,7 +233,7 @@ async def end_generate_video(state: M2VAgentState, config):
     """
     video_content = ""
     for index, video_fragment in enumerate(state.workflow_state.video_fragments):
-        video_content += f"""片段{index + 1}：{video_fragment.video_type}
+        video_content += f"""片段{index + 1}：{video_fragment.action_type}
             ，模特序号为{int(index/2)+1},视频时长为{video_fragment.video_duration}秒\n"""
     state.chat_history.append(
         AIMessage(content=f"""视频生成完成,生成的视频id为{state.workflow_state.id}，使用的生成策略是{state.workflow_state.i2v_strategy}，
@@ -270,8 +271,8 @@ async def generate_fragment(state: M2VAgentState, config):
     negative_prompt = content["negative_prompt"]
     i2v_strategy = content["i2v_strategy"]
     for model_image in model_images:
-        fragment_id = str(uuid.uuid4())
-        # video_type: str = Field(default="model_show",
+        fragment_id = get_time_id()
+        # action_type: str = Field(default="model_show",
         #                         description="视频类型(model_show, model_walk)")
         # # 以下是可以改变的地方
         # video_positive_prompt: str = Field(default="", description="视频正向prompt")
@@ -286,33 +287,33 @@ async def generate_fragment(state: M2VAgentState, config):
                 with open(os.path.join(result_dir, "video_url_v1.mp4"), "wb") as f:
                     f.write(video_data)
                 video_fragment = VideoFragment(id=fragment_id, video_index=1, model_image=model_image,
-                                               video_type=action_type, video_duration=video_fragment_duration, video_positive_prompt=prompt, video_negative_prompt=negative_prompt, video_url_v1="video_url_v1.mp4")
+                                               action_type=action_type, video_duration=video_fragment_duration, video_positive_prompt=prompt, video_negative_prompt=negative_prompt, video_url_v1="video_url_v1.mp4")
             elif action_type != "":
                 # 没有提供提示词，根据type来生成
                 # 对图片进行分析，获取模特图片信息
                 model_image_info = AnalyseImageAgent().analyse_image(
                     product=product, image_path=model_image)
                 video_positive_prompt, video_negative_prompt, video_url = await i2v_strategy_chain.execute_chain(product=product, product_info=product_info,
-                                                                                                                 img_path=model_image, img_info=model_image_info, video_type=action_type, video_duration=video_fragment_duration, i2v_strategy=i2v_strategy)
+                                                                                                                 img_path=model_image, img_info=model_image_info, action_type=action_type, video_duration=video_fragment_duration, i2v_strategy=i2v_strategy)
                 # 将视频url保存到video_fragment中
                 video_data = get_url_data(video_url)
                 with open(os.path.join(result_dir, "video_url_v1.mp4"), "wb") as f:
                     f.write(video_data)
                 video_fragment = VideoFragment(id=fragment_id, video_index=1, model_image=model_image,
-                                               video_type=action_type, video_duration=video_fragment_duration, video_positive_prompt=video_positive_prompt, video_negative_prompt=video_negative_prompt, video_url_v1="video_url_v1.mp4")
+                                               action_type=action_type, video_duration=video_fragment_duration, video_positive_prompt=video_positive_prompt, video_negative_prompt=video_negative_prompt, video_url_v1="video_url_v1.mp4")
             else:
                 # 都没有提供，使用默认值
                 action_type = "model_show"
                 model_image_info = AnalyseImageAgent().analyse_image(
                     product=product, image_path=model_image)
                 video_positive_prompt, video_negative_prompt, video_url = await i2v_strategy_chain.execute_chain(product=product, product_info=product_info,
-                                                                                                                 model_image_info=model_image_info, video_type=action_type, video_duration=video_fragment_duration)
+                                                                                                                 model_image_info=model_image_info, action_type=action_type, video_duration=video_fragment_duration)
                 # 将视频url保存到video_fragment中
                 video_data = get_url_data(video_url)
                 with open(os.path.join(result_dir, "video_url_v1.mp4"), "wb") as f:
                     f.write(video_data)
                 video_fragment = VideoFragment(id=fragment_id, video_index=1, model_image=model_image,
-                                               video_type=action_type, video_duration=video_fragment_duration, video_positive_prompt=video_positive_prompt, video_negative_prompt=video_negative_prompt, video_url_v1="video_url_v1.mp4")
+                                               action_type=action_type, video_duration=video_fragment_duration, video_positive_prompt=video_positive_prompt, video_negative_prompt=video_negative_prompt, video_url_v1="video_url_v1.mp4")
 
             if video_fragment is not None:
                 video_fragment.i2v_strategy = i2v_strategy
@@ -327,7 +328,7 @@ async def end_generate_fragment(state: M2VAgentState, config):
     fragment_content = ""
     for index, video_fragment in enumerate(state.video_fragment_list):
         fragment_content += f"""片段{index + 1}生成完成,生成的片段id为{video_fragment.id}，使用的生成策略是keling
-            ，视频内容：{video_fragment.video_type}，模特序号为{int(index/2)+1},视频时长为{video_fragment.video_duration}秒,
+            ，视频内容：{video_fragment.action_type}，模特序号为{int(index/2)+1},视频时长为{video_fragment.video_duration}秒,
             使用的正面提示词为({video_fragment.video_positive_prompt}),使用的负面提示词为({video_fragment.video_negative_prompt})\n"""
     state.chat_history.append(
         AIMessage(content=fragment_content))

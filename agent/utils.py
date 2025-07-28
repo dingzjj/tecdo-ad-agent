@@ -14,6 +14,7 @@ import requests
 from bs4 import BeautifulSoup
 from config import logger
 from agent.third_part.openai_whisper import transcribe_audio_to_words, convert_srt_file, generate_ass_with_default_config
+import threading
 
 
 def crawl_with_requests(url, selector, is_deep=False):
@@ -240,3 +241,21 @@ def get_video_duration(video_path: str) -> float:
         # 获取视频时长
         duration = video.duration
     return duration
+
+
+last_time_id = time.strftime("%Y%m%d%H%M%S", time.localtime())
+
+
+# 设置锁，每次只有一个进程可以获取id
+id_lock = threading.Lock()
+
+
+def get_time_id() -> str:
+    # 已时间为id，已格式化的时间为20250728100000
+    global last_time_id
+    with id_lock:
+        now_time_id = time.strftime("%Y%m%d%H%M%S", time.localtime())
+        if last_time_id == now_time_id:
+            now_time_id = str(int(now_time_id) + 1)
+        last_time_id = now_time_id
+        return now_time_id

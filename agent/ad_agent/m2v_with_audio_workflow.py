@@ -39,8 +39,8 @@ class VideoFragment(BaseModel):
     video_index: int = Field(description="视频索引")
     model_image: str = Field(default="", description="模特图片")
     model_image_info: str = Field(default="", description="模特图片信息")
-    video_type: str = Field(default="model_show",
-                            description="视频类型(model_show, model_walk)")
+    action_type: str = Field(default="model_show",
+                             description="视频类型(model_show, model_walk)")
     i2v_strategy: str = Field(default="keling", description="i2v策略")
 
     # 以下是可以改变的地方
@@ -55,7 +55,7 @@ class VideoFragment(BaseModel):
     video_url_v3: str = Field(default="", description="视频path(in local)")
 
     def __str__(self):
-        return f"视频片段id: {self.id}, 模特图片: {self.model_image}, 视频类型: {self.video_type}, i2v策略: {self.i2v_strategy}, 视频正向prompt: {self.video_positive_prompt}, 视频负向prompt: {self.video_negative_prompt}, 视频脚本: {self.video_script}, 视频时长: {self.video_duration}, 视频path(in local): {self.video_url_v3}"
+        return f"视频片段id: {self.id}, 模特图片: {self.model_image}, 视频类型: {self.action_type}, i2v策略: {self.i2v_strategy}, 视频正向prompt: {self.video_positive_prompt}, 视频负向prompt: {self.video_negative_prompt}, 视频脚本: {self.video_script}, 视频时长: {self.video_duration}, 视频path(in local): {self.video_url_v3}"
 
 
 class OutputVideo(BaseModel):
@@ -129,7 +129,7 @@ async def generate_video_fragments(state: GenerateVideoState, config):
     for i, model_image in enumerate(state.model_images):
         video_fragment = VideoFragment(id=str(auto_id), video_index=auto_id,
                                        model_image=model_image, video_duration=state.video_fragment_duration,
-                                       video_type="model_show", i2v_strategy=state.i2v_strategy)
+                                       action_type="model_show", i2v_strategy=state.i2v_strategy)
         auto_id += 1
         # 创建视频片段目录
         os.makedirs(os.path.join(result_dir, video_fragment.id), exist_ok=True)
@@ -137,7 +137,7 @@ async def generate_video_fragments(state: GenerateVideoState, config):
 
         video_fragment = VideoFragment(id=str(auto_id), video_index=auto_id,
                                        model_image=model_image, video_duration=state.video_fragment_duration,
-                                       video_type="model_walk", i2v_strategy=state.i2v_strategy)
+                                       action_type="model_walk", i2v_strategy=state.i2v_strategy)
         auto_id += 1
         # 创建视频片段目录
         os.makedirs(os.path.join(
@@ -198,7 +198,7 @@ async def generate_video(state: GenerateVideoState, config):
             product=state.product, product_info=state.product_info, img_path=real_image_path,
             img_info=video_fragment.model_image_info, duration=int(
                 state.video_fragment_duration),
-            resolution={}, video_type=video_fragment.video_type, i2v_strategy=state.i2v_strategy)
+            resolution={}, action_type=video_fragment.action_type, i2v_strategy=state.i2v_strategy)
         video_fragment.video_positive_prompt = video_positive_prompt
         video_fragment.video_negative_prompt = video_negative_prompt
         #  假如当前有文件则跳过
@@ -294,14 +294,18 @@ async def generate_audio(state: GenerateVideoState, config):
                 # 方法一：调口音速度
                 # 方法二：调字幕 TODO 口音速度在0.7-1.2之间，1.2之后超过则需要重新生成字幕文案
                 audio_speed += 0.05
+                if audio_speed > 1.2:
+                    state.is_audio_too_long = True
+                    break
                 text_to_speech_with_elevenlabs(conf.get(
                     "elevenlabs_api_key"), video_fragment.video_script, state.get_real_url(audio_file_path), "Laura", audio_speed)
                 audio_duration = get_audio_duration(
                     state.get_real_url(audio_file_path))
+
             merge_video_audio(state.get_real_url(video_fragment.video_url_v1), state.get_real_url(audio_file_path),
                               state.get_real_url(video_url_v2), 1, None, None)
             video_fragment.video_url_v2 = video_url_v2
-        return {"video_fragments": state.video_fragments}
+        return {"video_fragments": state.video_fragments, "is_audio_too_long": state.is_audio_too_long}
     except Exception as e:
         # 采取方案二：调字幕 TODO
         logger.error(f"生成音频失败: {e}")
@@ -440,7 +444,7 @@ async def ainvoke_m2v_with_audio_workflow(user_id: str, id: str, product: str, p
     os.makedirs(video_output_path, exist_ok=True)
     app = get_m2v_with_audio_workflow()
     configuration: RunnableConfig = {"configurable": {
-        "thread_id": user_id}}
+        "thread_id": f"{user_id}_{id}"}}
     # result_dir就是工作流目录
     result: GenerateVideoState = await app.ainvoke({"id": id, "product": product, "product_info": product_info, "model_images": model_images,
                                                     "video_fragment_duration": video_fragment_duration, "video_output_path": video_output_path},

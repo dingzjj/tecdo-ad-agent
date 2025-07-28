@@ -40,7 +40,7 @@ class I2VStrategy(ABC):
         self.name = name
 
     @abstractmethod
-    def generate_video_prompt(self, product, product_info, img_path, img_info, duration: int, type: str = "model_show"):
+    def generate_video_prompt(self, product, product_info, img_path, img_info, duration: int, action_type: str = "model_show"):
         """生成视频提示词
         product: 商品名称
         product_info: 商品信息
@@ -54,7 +54,7 @@ class I2VStrategy(ABC):
             "generate_video_prompt method must be implemented")
 
     @abstractmethod
-    def generate_video_prompt_with_suggestion(self, product, product_info, img_path, img_info, duration: int, suggestion: str, type: str = "model_show"):
+    def generate_video_prompt_with_suggestion(self, product, product_info, img_path, img_info, duration: int, suggestion: str, action_type: str = "model_show"):
         """
         根据suggestion生成视频提示词
         """
@@ -110,24 +110,24 @@ class I2VStrategyChain:
             img_path=img_path, positive_prompt=video_positive_prompt, negative_prompt=video_negative_prompt, duration=duration)
         return video_url
 
-    async def execute_chain_with_suggestion(self, product, product_info, img_path, img_info, duration: int, resolution: dict = {}, video_type: str = "model_show", suggestion: str = "", i2v_strategy: str = "keling"):
+    async def execute_chain_with_suggestion(self, product, product_info, img_path, img_info, duration: int, resolution: dict = {}, action_type: str = "model_show", suggestion: str = "", i2v_strategy: str = "keling"):
         """
         返回视频提示词，视频负向提示词，视频url
         """
         strategy = self.get_strategy(i2v_strategy)
         video_positive_prompt, video_negative_prompt = strategy.generate_video_prompt_with_suggestion(
-            product, product_info, img_path, img_info, duration, suggestion, type=video_type)
+            product, product_info, img_path, img_info, duration, suggestion, action_type=action_type)
         video_url = await strategy.execute_generate_video(
             img_path, video_positive_prompt, video_negative_prompt, duration)
         return video_positive_prompt, video_negative_prompt, video_url
 
-    async def execute_chain(self, product, product_info, img_path, img_info, duration: int, resolution: dict = {}, video_type: str = "model_show", i2v_strategy: str = "keling"):
+    async def execute_chain(self, product, product_info, img_path, img_info, duration: int, resolution: dict = {}, action_type: str = "model_show", i2v_strategy: str = "keling"):
         """
         返回视频提示词，视频负向提示词，视频url(url是global url)
         """
         strategy = self.get_strategy(i2v_strategy)
         video_positive_prompt, video_negative_prompt = strategy.generate_video_prompt(
-            product, product_info, img_path, img_info, duration, type=video_type)
+            product, product_info, img_path, img_info, duration, action_type=action_type)
         video_url = await strategy.execute_generate_video(
             img_path, video_positive_prompt, video_negative_prompt, duration)
         return video_positive_prompt, video_negative_prompt, video_url
@@ -138,17 +138,17 @@ class I2VStrategyChain:
             img_path=img_path, positive_prompt=video_positive_prompt, negative_prompt=video_negative_prompt, duration=duration)
         return video_url
 
-
+KELING_STRATEGY = "keling"
 class Keling(I2VStrategy):
     def __init__(self, model: str = "kling-v2-1"):
         name: str = "keling"
         self.model = model
         super().__init__(name)
 
-    def generate_video_prompt(self, product, product_info, img_path, img_info, duration: int, type: str = "模特展示衣服"):
+    def generate_video_prompt(self, product, product_info, img_path, img_info, duration: int, action_type: str = "模特展示衣服"):
         classifier = ActionTypesClassifier(
             categories=["模特展示衣服", "模特走秀", "模特转身", "模特调整衣服", "模特用手抚摸衣服", "模特提起裙子","以上都不匹配"])
-        category = classifier.classify(type)
+        category = classifier.classify(action_type)
         
         with open(img_path, "rb") as file:
             image_data = file.read()
@@ -179,7 +179,7 @@ class Keling(I2VStrategy):
             return video_positive_prompt, video_negative_prompt
         else:
             # "以上都不匹配"
-            video_positive_prompt = type
+            video_positive_prompt = action_type
             video_negative_prompt = "deformation, poor composition, camera movement, model walking, appearance of other people or loss of facial or limb structure such as bad teeth, bad eyes, bad limbs."
             return video_positive_prompt, video_negative_prompt
         gemini_generative_model = get_gemini_multimodal_model(
@@ -197,10 +197,10 @@ class Keling(I2VStrategy):
         video_positive_prompt = content_json.get("prompt", "")
         return video_positive_prompt, video_negative_prompt
 
-    def generate_video_prompt_with_suggestion(self, product, product_info, img_path, img_info, duration: int, suggestion: str = "", type: str = "模特展示衣服"):
+    def generate_video_prompt_with_suggestion(self, product, product_info, img_path, img_info, duration: int, suggestion: str = "", action_type: str = "模特展示衣服"):
         classifier = ActionTypesClassifier(
             categories=["模特展示衣服", "模特走秀", "模特转身", "模特调整衣服", "模特用手抚摸衣服", "模特提起裙子"])
-        category = classifier.classify(type+" "+ suggestion)
+        category = classifier.classify(action_type+" "+ suggestion)
 
         with open(img_path, "rb") as file:
             image_data = file.read()

@@ -16,8 +16,10 @@ import time
 from modules.util import chatbot_to_chat_history
 from langchain_core.messages import AIMessage
 
+from pojo import user_id
 
-def send_message_to_ad_agent(user_input, chatbot, user_id, is_end):
+
+def send_message_to_ad_agent(user_input, chatbot, is_end):
     print("user_input", user_input)
     print("chatbot", chatbot)
     print("user_id", user_id)

@@ -41,8 +41,8 @@ class VideoFragment(BaseModel):
     video_index: int = Field(description="视频索引")
     model_image: str = Field(default="", description="模特图片")
     model_image_info: str = Field(default="", description="模特图片信息")
-    video_type: str = Field(default="model_show",
-                            description="视频类型(model_show, model_walk)")
+    action_type: str = Field(default="model_show",
+                             description="视频类型(model_show, model_walk)")
     i2v_strategy: str = Field(default="keling", description="i2v策略")
 
     # 以下是可以改变的地方
@@ -57,7 +57,7 @@ class VideoFragment(BaseModel):
     video_url_v3: str = Field(default="", description="视频path(in local)")
 
     def __str__(self):
-        return f"视频片段id: {self.id}, 模特图片: {self.model_image}, 视频类型: {self.video_type}, i2v策略: {self.i2v_strategy}, 视频正向prompt: {self.video_positive_prompt}, 视频负向prompt: {self.video_negative_prompt}, 视频脚本: {self.video_script}, 视频时长: {self.video_duration}, 视频path(in local): {self.video_url_v3}"
+        return f"视频片段id: {self.id}, 模特图片: {self.model_image}, 视频类型: {self.action_type}, i2v策略: {self.i2v_strategy}, 视频正向prompt: {self.video_positive_prompt}, 视频负向prompt: {self.video_negative_prompt}, 视频脚本: {self.video_script}, 视频时长: {self.video_duration}, 视频path(in local): {self.video_url_v3}"
 
 
 class OutputVideo(BaseModel):
@@ -130,14 +130,14 @@ async def generate_video_fragments(state: GenerateVideoState, config):
     auto_id = 1
     # 数字人
     video_fragment = VideoFragment(
-        id=auto_id, video_index=auto_id, video_type="digital_human")
+        id=auto_id, video_index=auto_id, action_type="digital_human")
     state.video_fragments.append(video_fragment)
     os.makedirs(os.path.join(result_dir, video_fragment.id), exist_ok=True)
     auto_id += 1
     # 模特展示
     for i, model_image in enumerate(state.model_images):
         video_fragment = VideoFragment(id=auto_id, video_index=auto_id,
-                                       model_image=model_image, video_duration=state.video_fragment_duration, video_type="model_show", i2v_strategy=state.i2v_strategy)
+                                       model_image=model_image, video_duration=state.video_fragment_duration, action_type="model_show", i2v_strategy=state.i2v_strategy)
 
         # 创建视频片段目录
         auto_id += 1
@@ -155,7 +155,7 @@ async def generate_video_script(state: GenerateVideoState, config):
 
     for i, video_fragment in enumerate(state.video_fragments):
 
-        if video_fragment.video_type == "digital_human":
+        if video_fragment.action_type == "digital_human":
             continue
         real_image_path = state.get_real_url(video_fragment.model_image)
 
@@ -195,7 +195,7 @@ async def generate_video(state: GenerateVideoState, config):
     result_dir = state.video_output_path
 
     async def process_video_fragment(video_fragment: VideoFragment):
-        if video_fragment.video_type == "digital_human":
+        if video_fragment.action_type == "digital_human":
             return video_fragment
         """处理单个视频片段的异步函数"""
         real_image_path = state.get_real_url(video_fragment.model_image)
@@ -203,7 +203,7 @@ async def generate_video(state: GenerateVideoState, config):
             product=state.product, product_info=state.product_info, img_path=real_image_path,
             img_info=video_fragment.model_image_info, duration=int(
                 state.video_fragment_duration),
-            resolution={}, video_type=video_fragment.video_type, i2v_strategy=state.i2v_strategy)
+            resolution={}, action_type=video_fragment.action_type, i2v_strategy=state.i2v_strategy)
         video_fragment.video_positive_prompt = video_positive_prompt
         video_fragment.video_negative_prompt = video_negative_prompt
         #  假如当前有文件则跳过
@@ -249,7 +249,7 @@ async def generate_audio_text(state: GenerateVideoState, config):
         word_max_count = int((state.video_fragment_duration-2)*4)  # 21 - 28
     state.is_audio_too_long = False
     for i, video_fragment in enumerate(state.video_fragments):
-        if video_fragment.video_type == "digital_human":
+        if video_fragment.action_type == "digital_human":
             continue
         fragment_info += f"( fragment{i}:{video_fragment.model_image_info})\n"
         CREATE_AUDIO_TEXT_RESPONSE_SCHEMA["properties"][f"fragment{i}"] = {
@@ -271,7 +271,7 @@ async def generate_audio_text(state: GenerateVideoState, config):
     content = json.loads(response.candidates[0].content.parts[0].text)
     state.output_video.subtitle_text = content
     for i, video_fragment in enumerate(state.video_fragments):
-        if video_fragment.video_type == "digital_human":
+        if video_fragment.action_type == "digital_human":
             video_fragment.video_script = content["begin"]
         else:
             video_fragment.video_script = content[f"fragment{i}"]
@@ -296,7 +296,7 @@ async def generate_digital_human_video_and_audio(state: GenerateVideoState, conf
             logger.error(f"generate_digital_human_video_and_audio 生成视频失败，视频url为空，视频脚本：{
                          video_fragment.video_script}")
             raise ValueError("generate_digital_human_video_and_audio生成视频失败")
-        if video_fragment.video_type == "digital_human":
+        if video_fragment.action_type == "digital_human":
             # 开头视频，保留视频+音频
             # 假如当前有文件则跳过
             video_url_v2 = os.path.join(video_fragment.id, "video_url_v2.mp4")
@@ -375,7 +375,7 @@ async def video_stitching(state: GenerateVideoState, config):
     video_v2_list = []
     video_v3_list = []
     for video_fragment in state.video_fragments:
-        if video_fragment.video_type == "digital_human":
+        if video_fragment.action_type == "digital_human":
             video_v2_list.append(state.get_real_url(
                 video_fragment.video_url_v2))
             video_v3_list.append(state.get_real_url(
@@ -478,7 +478,7 @@ async def ainvoke_m2v_with_audio_digital_human_workflow(user_id: str, id: str, p
     os.makedirs(video_output_path, exist_ok=True)
     graph = get_m2v_with_audio__digital_human_workflow()
     configuration: RunnableConfig = {"configurable": {
-        "thread_id": user_id}}
+        "thread_id": f"{user_id}_{id}"}}
     # result_dir就是工作流目录
     result: GenerateVideoState = await graph.ainvoke({"id": id, "product": product, "product_info": product_info, "model_images": model_images,
                                                       "video_fragment_duration": video_fragment_duration, "video_output_path": video_output_path},

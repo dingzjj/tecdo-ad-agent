@@ -4,6 +4,8 @@ import os
 from typing import Dict, Any, Optional, List
 import logging
 
+modules_path = os.path.dirname(os.path.realpath(__file__))
+
 
 class Config:
     """配置管理类，用于读取和管理config.json配置文件"""
