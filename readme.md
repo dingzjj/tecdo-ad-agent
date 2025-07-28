@@ -1,7 +1,8 @@
-# TODO
+# 广告素材智能助手
 
-1.所有，配置模型的选择
-2.ad agent的历史对话功能
-3.创作平台（增加所有创作方式,veo3,keling）
-4.单独创作视频功能
-5.增加才能出现（render）
+
+## 项目环境
+gradio 5
+python3.12
+langgraph
+
