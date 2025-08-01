@@ -1,0 +1,2 @@
+class ComfyUIError(Exception):
+    pass

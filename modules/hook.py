@@ -10,13 +10,15 @@ import gradio as gr
 from agent.ad_agent.do_workflow import start_hint
 
 from pojo import user_id
+import cv2
+from PIL import Image
 
 
 def load_app():
     os.makedirs(os.path.join(
         conf.get("user_data_dir"), user_id), exist_ok=True)
-    chatbot = [gr.ChatMessage(role="assistant", content=start_hint)]
-    return chatbot
+    # chatbot = [gr.ChatMessage(role="assistant", content=start_hint)]
+
 
 # 先为chatbot添加用户输入
 

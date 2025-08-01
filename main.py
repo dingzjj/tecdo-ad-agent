@@ -1,3 +1,6 @@
+from modules.hook_game_ad import generate_game_ad_final_video
+from modules.hook_game_ad import get_game_ad_video_mid_state, game_ad_submit, update_game_ad_video_mid_state
+from modules.hook_game_ad import game_ad_submit
 import os
 from config import conf
 from modules.hook import load_app
@@ -302,50 +305,114 @@ with gr.Blocks() as demo:
             # 第三组 - 使用终极动态组件
             m2v_v2_group3_container_image_item, m2v_v2_group3_container_img, m2v_v2_group3_container_positive_prompt, m2v_v2_group3_container_negative_prompt, m2v_v2_group3_container_action_type, m2v_v2_group3_container_video_show_box = create_m2v_v2_image_container(
                 3)
-    with gr.Tab("ad agent"):
+
+    with gr.Tab("game ad agent"):
+        game_ad_agent_mid_video = gr.State("")
+        game_ad_agent_mid_video_first_image = gr.State("")
+        game_video_input_width = gr.State(0)
+        game_video_input_height = gr.State(0)
         with gr.Row():
+            # 游戏视频与游戏封面输入
             with gr.Column(scale=1):
-                gr.Markdown("## 会话管理")
-
-            with gr.Column(scale=2):
-                gr.Markdown("## 聊天区域")
-                chatbot = gr.Chatbot(
-                    label="聊天记录",
-                    value=[],
-                    type="messages",
-                    elem_classes=["chatbot-container"]
+                gr.Markdown("## 🎥 游戏视频输入")
+                game_video_input = gr.Video(
+                    label="游戏视频",
+                    height=200,
+                    sources=["upload"],
+                    interactive=True,
+                    elem_classes=["video-show-box"]
                 )
-
-                ad_agent_user_input = gr.MultimodalTextbox(
+                game_cover_input = gr.Image(
+                    label="游戏封面",
+                    height=200,
+                    sources=["upload"],
+                    interactive=True,
+                    elem_classes=["image-show-box"]
+                )
+                game_ad_mid_submit_btn = gr.Button("提交")
+            # 游戏广告视频输出
+            with gr.Column(scale=1):
+                gr.Markdown("## 🎥 确定游戏画面位置")
+                game_ad_video_mid_output = gr.AnnotatedImage(
                     label="",
-                    placeholder="请输入内容...",
-                    file_count="multiple",
-                    elem_id="ad_agent_user_input",
-                    elem_classes=["user-input"]
+                    height=200,
+                    elem_classes=["image-show-box"]
                 )
-            with gr.Column(scale=2):
-                gr.Markdown("## 文件管理")
-                with gr.Group(elem_id="file_explorer_group"):
-                    ad_agent_file_explorer = gr.FileExplorer(label="文件管理", root_dir=f"{os.path.join(
-                        conf.get_path("user_data_dir"), user_id)}", file_count="single", ignore_glob="*.json")
+                x_slider = gr.Slider(
+                    label="x",
+                    minimum=0,
+                    maximum=1,
+                    step=1,
+                    value=0
+                )
+                y_slider = gr.Slider(
+                    label="y",
+                    minimum=0,
+                    maximum=1,
+                    step=1,
+                    value=0
+                )
+                width_slider = gr.Slider(
+                    label="width",
+                    minimum=0,
+                    maximum=1,
+                    step=1,
+                    value=0
+                )
+                game_ad_final_submit_btn = gr.Button("提交")
+                # 在视频上调动游戏画面
 
-                    with gr.Group():
-                        with gr.Row():
-                            with gr.Column():
-                                video_display = gr.Video(
-                                    label="视频展示", value=None, sources=["upload"])
-                            with gr.Column():
-                                image_display = gr.Image(
-                                    label="图片展示", value=None, sources=["upload"])
+            with gr.Column(scale=1):
+                gr.Markdown("## 🎥 游戏广告视频输出")
+                with gr.Row():
+                    game_ad_video_final_output = gr.Video(
+                        label="游戏广告视频",
+                        height=200,
+                        interactive=False,
+                        elem_classes=["video-show-box"]
+                    )
+
+    # with gr.Tab("ad agent"):
+    #     with gr.Row():
+    #         with gr.Column(scale=1):
+    #             gr.Markdown("## 会话管理")
+
+    #         with gr.Column(scale=2):
+    #             gr.Markdown("## 聊天区域")
+    #             chatbot = gr.Chatbot(
+    #                 label="聊天记录",
+    #                 value=[],
+    #                 type="messages",
+    #                 elem_classes=["chatbot-container"]
+    #             )
+
+    #             ad_agent_user_input = gr.MultimodalTextbox(
+    #                 label="",
+    #                 placeholder="请输入内容...",
+    #                 file_count="multiple",
+    #                 elem_id="ad_agent_user_input",
+    #                 elem_classes=["user-input"]
+    #             )
+    #         with gr.Column(scale=2):
+    #             gr.Markdown("## 文件管理")
+    #             with gr.Group(elem_id="file_explorer_group"):
+    #                 ad_agent_file_explorer = gr.FileExplorer(label="文件管理", root_dir=f"{os.path.join(
+    #                     conf.get_path("user_data_dir"), user_id)}", file_count="single", ignore_glob="*.json")
+
+    #                 with gr.Group():
+    #                     with gr.Row():
+    #                         with gr.Column():
+    #                             video_display = gr.Video(
+    #                                 label="视频展示", value=None, sources=["upload"])
+    #                         with gr.Column():
+    #                             image_display = gr.Image(
+    #                                 label="图片展示", value=None, sources=["upload"])
 
     m2v_v1_clear_btn_output = list(m2v_v1_group1_container_img)
     m2v_v1_clear_btn_output.extend(m2v_v1_group2_container_img)
     m2v_v1_clear_btn_output.extend(m2v_v1_group3_container_img)
     m2v_v1_clear_btn.click(fn=m2v_v1_clear, inputs=[m2v_v1_group_number, m2v_v1_group_img_container_number],
                            outputs=m2v_v1_clear_btn_output)
-
-    ad_agent_file_explorer.change(
-        fn=change_file, inputs=[ad_agent_file_explorer], outputs=[video_display, image_display])
 
     m2v_v1_generate_input = [m2v_v1_positive_prompt, m2v_v1_negative_prompt]
     m2v_v1_generate_input.extend(m2v_v1_group1_container_img)
@@ -355,10 +422,31 @@ with gr.Blocks() as demo:
         fn=m2v_v1_generate, inputs=(m2v_v1_generate_input),
         outputs=[m2v_v1_video1, m2v_v1_video2, m2v_v1_video3])
 
-    ad_agent_user_input.submit(fn=user_input_func, inputs=[ad_agent_user_input, chatbot], outputs=[chatbot]).then(
-        fn=send_message_to_ad_agent, inputs=[ad_agent_user_input, chatbot, is_end], outputs=[chatbot, is_end])
-    demo.load(fn=load_app, inputs=[], outputs=[chatbot])
+    # ad_agent_user_input.submit(fn=user_input_func, inputs=[ad_agent_user_input, chatbot], outputs=[chatbot]).then(
+    #     fn=send_message_to_ad_agent, inputs=[ad_agent_user_input, chatbot, is_end], outputs=[chatbot, is_end])
+    # demo.load(fn=load_app, inputs=[], outputs=[chatbot])
+    # ad_agent_file_explorer.change(
+    #     fn=change_file, inputs=[ad_agent_file_explorer], outputs=[video_display, image_display])
 
+    demo.load(fn=load_app, inputs=[], outputs=[])
 
-demo.queue(max_size=10, default_concurrency_limit=5)
-demo.launch(server_name="0.0.0.0", server_port=6009, share=False)
+    game_ad_mid_submit_btn.click(fn=game_ad_submit, inputs=[
+        game_video_input, game_cover_input],
+        outputs=[game_ad_agent_mid_video, game_video_input_width, game_video_input_height]).then(fn=get_game_ad_video_mid_state,
+                                                                                                 inputs=[game_ad_agent_mid_video], outputs=[game_ad_agent_mid_video_first_image, x_slider,
+                                                                                                                                            y_slider, width_slider]).then(fn=update_game_ad_video_mid_state, inputs=[
+                                                                                                                                                x_slider, y_slider, width_slider, game_ad_agent_mid_video_first_image, game_video_input, game_video_input_width, game_video_input_height], outputs=[game_ad_video_mid_output])
+    x_slider.change(fn=update_game_ad_video_mid_state, inputs=[
+                    x_slider, y_slider, width_slider, game_ad_agent_mid_video_first_image, game_video_input, game_video_input_width, game_video_input_height], outputs=[game_ad_video_mid_output])
+
+    y_slider.change(fn=update_game_ad_video_mid_state, inputs=[
+                    x_slider, y_slider, width_slider, game_ad_agent_mid_video_first_image, game_video_input, game_video_input_width, game_video_input_height], outputs=[game_ad_video_mid_output])
+
+    width_slider.change(fn=update_game_ad_video_mid_state, inputs=[
+        x_slider, y_slider, width_slider, game_ad_agent_mid_video_first_image, game_video_input, game_video_input_width, game_video_input_height], outputs=[game_ad_video_mid_output])
+
+    game_ad_final_submit_btn.click(fn=generate_game_ad_final_video, inputs=[
+        game_video_input, game_cover_input, game_ad_agent_mid_video, x_slider, y_slider, width_slider], outputs=[game_ad_video_final_output])
+
+demo.queue(max_size=20, default_concurrency_limit=5)
+demo.launch(server_name="0.0.0.0", server_port=6012, share=False)

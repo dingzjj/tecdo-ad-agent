@@ -1,0 +1,31 @@
+{
+    "phone": [
+        {
+            "img_path": "images/phone.png",
+            "img_size": [
+                219,
+                433
+            ],
+            "points": [
+                [
+                    10,
+                    10
+                ],
+                [
+                    10,
+                    421
+                ],
+                [
+                    213,
+                    421
+                ],
+                [
+                    213,
+                    10
+                ]
+            ],
+            "phone_type": "iphone11",
+            "length_width_ratio": 2.024
+        }
+    ]
+}

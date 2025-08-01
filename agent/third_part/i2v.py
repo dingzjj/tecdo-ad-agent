@@ -72,24 +72,6 @@ class I2VStrategy(ABC):
         """
         raise NotImplementedError("execute method must be implemented")
 
-    @abstractmethod
-    async def adapt_resolution(self, src_video_path, resolution: dict):
-        """对生成的视频进行适配
-        src_video_path: 源视频路径(在本地)
-        resolution: 目标分辨率
-        return: 适配后的视频路径
-        """
-        raise NotImplementedError(
-            "adapt_resolution method must be implemented")
-
-    @abstractmethod
-    async def remove_watermark(self, src_video_path, desc_video_path):
-        """
-        移除水印(水印在视频右下角)
-        """
-        raise NotImplementedError(
-            "remove_watermark method must be implemented")
-
 
 class I2VStrategyChain:
     def __init__(self, strategies: List[I2VStrategy]):
@@ -251,16 +233,6 @@ class Keling(I2VStrategy):
         video_positive_prompt = content_json.get("prompt", "")
         return video_positive_prompt, video_negative_prompt
 
-    async def remove_watermark(self, src_video_path, desc_video_path):
-        """
-        移除水印(水印在视频右下角)
-        """
-        pass
-
-    async def adapt_resolution(self, src_video_path, resolution: dict):
-        # 返回原文件
-        return share_file_in_oss(src_video_path, f"{str(uuid.uuid4())}.mp4")
-
     async def execute_generate_video(self, img_path, positive_prompt: str, negative_prompt: str,  duration: int) -> str:
         # 使用keling的api生成视频，最终返回一个url，url是视频的地址
         http_client = httpx.Client(timeout=httpx.Timeout(
@@ -342,6 +314,21 @@ class Keling(I2VStrategy):
                 logger.error(f"未知任务状态: {task_status}")
             await asyncio.sleep(interval)
 
+
+class Veo3(I2VStrategy):
+    def __init__(self, model: str = "veo3"):
+        name: str = "veo3"
+        self.model = model
+        super().__init__(name)
+    
+    def generate_video_prompt(self, product, product_info, img_path, img_info, duration: int, action_type: str = "model_show"):
+        pass
+    
+    def generate_video_prompt_with_suggestion(self, product, product_info, img_path, img_info, duration: int, suggestion: str, action_type: str = "model_show"):
+        pass
+    
+    async def execute_generate_video(self, img_path, positive_prompt: str, negative_prompt: str,  duration: int) -> str:
+        pass
 
 i2v_strategy_chain = I2VStrategyChain([Keling()])
 

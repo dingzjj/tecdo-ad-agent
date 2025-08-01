@@ -1,0 +1,412 @@
+    {
+        "1": {
+            "inputs": {
+                "seed": 1043913072443083,
+                "steps": 20,
+                "cfg": 1,
+                "sampler_name": "euler",
+                "scheduler": "simple",
+                "denoise": 1,
+                "model": [
+                    "13",
+                    0
+                ],
+                "positive": [
+                    "17",
+                    0
+                ],
+                "negative": [
+                    "5",
+                    0
+                ],
+                "latent_image": [
+                    "10",
+                    0
+                ]
+            },
+            "class_type": "KSampler",
+            "_meta": {
+                "title": "K采样器"
+            }
+        },
+        "2": {
+            "inputs": {
+                "vae_name": "ae.safetensors"
+            },
+            "class_type": "VAELoader",
+            "_meta": {
+                "title": "加载VAE"
+            }
+        },
+        "4": {
+            "inputs": {
+                "image": [
+                    "45",
+                    0
+                ]
+            },
+            "class_type": "FluxKontextImageScale",
+            "_meta": {
+                "title": "FluxKontextImageScale"
+            }
+        },
+        "5": {
+            "inputs": {
+                "conditioning": [
+                    "7",
+                    0
+                ]
+            },
+            "class_type": "ConditioningZeroOut",
+            "_meta": {
+                "title": "条件零化"
+            }
+        },
+        "6": {
+            "inputs": {
+                "pixels": [
+                    "4",
+                    0
+                ],
+                "vae": [
+                    "2",
+                    0
+                ]
+            },
+            "class_type": "VAEEncode",
+            "_meta": {
+                "title": "VAE编码"
+            }
+        },
+        "7": {
+            "inputs": {
+                "text": [
+                    "9",
+                    0
+                ],
+                "speak_and_recognation": {
+                    "__value__": [
+                        false,
+                        true
+                    ]
+                },
+                "clip": [
+                    "20",
+                    0
+                ]
+            },
+            "class_type": "CLIPTextEncode",
+            "_meta": {
+                "title": "CLIP文本编码"
+            }
+        },
+        "8": {
+            "inputs": {
+                "conditioning": [
+                    "7",
+                    0
+                ],
+                "latent": [
+                    "6",
+                    0
+                ]
+            },
+            "class_type": "ReferenceLatent",
+            "_meta": {
+                "title": "ReferenceLatent"
+            }
+        },
+        "9": {
+            "inputs": {
+                "from_translate": "auto",
+                "to_translate": "en",
+                "manual_translate": false,
+                "Manual Trasnlate": "Manual Trasnlate",
+                "text": [
+                    "29",
+                    0
+                ],
+                "speak_and_recognation": {
+                    "__value__": [
+                        false,
+                        true
+                    ]
+                }
+            },
+            "class_type": "GoogleTranslateTextNode",
+            "_meta": {
+                "title": "Google Translate Text Node"
+            }
+        },
+        "10": {
+            "inputs": {
+                "amount": 1,
+                "samples": [
+                    "6",
+                    0
+                ]
+            },
+            "class_type": "RepeatLatentBatch",
+            "_meta": {
+                "title": "复制Latent批次"
+            }
+        },
+        "11": {
+            "inputs": {
+                "size": 1024,
+                "mode": true,
+                "images": [
+                    "27",
+                    0
+                ]
+            },
+            "class_type": "ImageScaleDownToSize",
+            "_meta": {
+                "title": "Scale Down To Size"
+            }
+        },
+        "12": {
+            "inputs": {
+                "direction": "down",
+                "match_image_size": true,
+                "spacing_width": 0,
+                "spacing_color": "white",
+                "image1": [
+                    "31",
+                    0
+                ],
+                "image2": [
+                    "27",
+                    0
+                ]
+            },
+            "class_type": "ImageStitch",
+            "_meta": {
+                "title": "Image Stitch"
+            }
+        },
+        "13": {
+            "inputs": {
+                "lora_name": "place_it-Kontext贴图溶图(1).safetensors",
+                "strength_model": 1,
+                "model": [
+                    "19",
+                    0
+                ]
+            },
+            "class_type": "LoraLoaderModelOnly",
+            "_meta": {
+                "title": "LoRA加载器（仅模型）"
+            }
+        },
+        "14": {
+            "inputs": {
+                "model": "RMBG-2.0",
+                "sensitivity": 1,
+                "process_res": 1024,
+                "mask_blur": 0,
+                "mask_offset": 0,
+                "invert_output": false,
+                "refine_foreground": false,
+                "background": "Alpha",
+                "image": [
+                    "31",
+                    0
+                ]
+            },
+            "class_type": "RMBG",
+            "_meta": {
+                "title": "去除背景 (RMBG)"
+            }
+        },
+        "15": {
+            "inputs": {
+                "direction": "right",
+                "match_image_size": true,
+                "spacing_width": 0,
+                "spacing_color": "white",
+                "image1": [
+                    "12",
+                    0
+                ],
+                "image2": [
+                    "16",
+                    0
+                ]
+            },
+            "class_type": "ImageStitch",
+            "_meta": {
+                "title": "Image Stitch"
+            }
+        },
+        "16": {
+            "inputs": {
+                "samples": [
+                    "1",
+                    0
+                ],
+                "vae": [
+                    "2",
+                    0
+                ]
+            },
+            "class_type": "VAEDecode",
+            "_meta": {
+                "title": "VAE解码"
+            }
+        },
+        "17": {
+            "inputs": {
+                "guidance": 2.5,
+                "conditioning": [
+                    "8",
+                    0
+                ]
+            },
+            "class_type": "FluxGuidance",
+            "_meta": {
+                "title": "Flux引导"
+            }
+        },
+        "18": {
+            "inputs": {
+                "images": [
+                    "15",
+                    0
+                ]
+            },
+            "class_type": "PreviewImage",
+            "_meta": {
+                "title": "预览图像"
+            }
+        },
+        "19": {
+            "inputs": {
+                "unet_name": "flux1-kontext-dev.safetensors",
+                "weight_dtype": "default"
+            },
+            "class_type": "UNETLoader",
+            "_meta": {
+                "title": "UNet加载器"
+            }
+        },
+        "20": {
+            "inputs": {
+                "clip_name1": "clip_l.safetensors",
+                "clip_name2": "t5xxl_fp16.safetensors",
+                "type": "flux",
+                "device": "default"
+            },
+            "class_type": "DualCLIPLoader",
+            "_meta": {
+                "title": "双CLIP加载器"
+            }
+        },
+        "22": {
+            "inputs": {
+                "text_0": "place it in hand. Then repaint the hand, change the gesture, and ask the hand to hold the phone tightly and place part of the finger on the phone screen",
+                "text": [
+                    "9",
+                    0
+                ]
+            },
+            "class_type": "ShowText|pysssss",
+            "_meta": {
+                "title": "Show Text 🐍"
+            }
+        },
+        "27": {
+            "inputs": {
+                "image": "img_v3_02om_b09fef3d-4216-44ff-adb8-b794dc9548fg.png"
+            },
+            "class_type": "LoadImage",
+            "_meta": {
+                "title": "加载图像"
+            }
+        },
+        "28": {
+            "inputs": {
+                "images": [
+                    "16",
+                    0
+                ]
+            },
+            "class_type": "PreviewImage",
+            "_meta": {
+                "title": "预览图像"
+            }
+        },
+        "29": {
+            "inputs": {
+                "text": "place it in hand. 然后对手部重绘，改变手势，要求手紧紧拿着握住手机，部分手指放在手机屏幕上",
+                "speak_and_recognation": {
+                    "__value__": [
+                        false,
+                        true
+                    ]
+                }
+            },
+            "class_type": "Text Multiline",
+            "_meta": {
+                "title": "Text Multiline"
+            }
+        },
+        "30": {
+            "inputs": {
+                "images": [
+                    "4",
+                    0
+                ]
+            },
+            "class_type": "PreviewImage",
+            "_meta": {
+                "title": "预览图像"
+            }
+        },
+        "31": {
+            "inputs": {
+                "image": "img_v3_02om_83f8c8b1-2089-471f-aaec-7a072b36916g.jpg"
+            },
+            "class_type": "LoadImage",
+            "_meta": {
+                "title": "加载图像"
+            }
+        },
+        "45": {
+            "inputs": {
+                "x": 0,
+                "y": 0,
+                "resize_source": false,
+                "destination": [
+                    "11",
+                    0
+                ],
+                "source": [
+                    "46",
+                    0
+                ],
+                "mask": [
+                    "14",
+                    1
+                ]
+            },
+            "class_type": "ImageCompositeMasked",
+            "_meta": {
+                "title": "合成图像（遮罩）"
+            }
+        },
+        "46": {
+            "inputs": {
+                "size": 1024,
+                "mode": true,
+                "images": [
+                    "14",
+                    0
+                ]
+            },
+            "class_type": "ImageScaleDownToSize",
+            "_meta": {
+                "title": "Scale Down To Size"
+            }
+        }
+    }
