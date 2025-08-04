@@ -1,5 +1,4 @@
-from modules.hook_game_ad import generate_game_ad_final_video
-from modules.hook_game_ad import get_game_ad_video_mid_state, step1_submit, step2_submit, update_game_ad_video_mid_state
+from modules.hook_game_ad import get_game_ad_video_mid_state, step1_submit, step2_submit, step3_submit, update_game_ad_video_mid_state
 import os
 from config import conf
 from modules.hook import load_app
@@ -11,7 +10,6 @@ from modules.hook_m2v import m2v_v2_generate, m2v_v2_video_stitching
 from modules.hook_ad_agent import send_message_to_ad_agent
 from modules.hook import user_input_func
 from modules.hook import m2v_v2_add_image_btn_click, m2v_v2_remove_image_btn_click
-from modules.hook_game_ad import step3_submit
 from agent.utils import get_time_id
 image_container_init_number = 0
 

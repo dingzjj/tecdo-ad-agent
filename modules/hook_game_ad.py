@@ -88,7 +88,6 @@ def step3_submit(user_id,all_video_v2_list,game_video_input,x,y,width):
     """
     x1= x
     y1 = y
-
     # 先将视频进行拼接
     video_stitching_temp_path = os.path.join(conf.get_path("temp_dir"),f"{get_time_id()}")
     video_stitching_path = video_stitching(video_stitching_temp_path,all_video_v2_list,VideoTransitionType.CONCATENATE)
@@ -188,26 +187,6 @@ def update_game_ad_video_mid_state(x_slider, y_slider, width_slider, game_ad_age
         return (game_ad_agent_mid_video_first_image, [])
 
 
-def select_img_v1(img_v1_gallery_select_box):
-    """
-    选择图片
-    """
-
-    return img_v1_gallery_select_box
-
-def generate_game_ad_final_video(game_video_input, game_cover_input, game_ad_agent_mid_video, x_slider, y_slider, width_slider):
-    """
-    生成最终视频
-    """
-    pass
-
-
-def put_game_ad_agent_mid_video_gallery(game_ad_agent_mid_video):
-    """
-    输出片段让用户选择
-    """
-
-    return [game_ad_agent_mid_video]
 
 
 
