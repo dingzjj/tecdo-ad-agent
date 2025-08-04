@@ -12,7 +12,7 @@ from agent.third_part.ffmpeg import extract_audio
 import uuid
 from agent.utils import get_url_data
 from agent.ad_agent.prompt import CREATE_AUDIO_TEXT_SYSTEM_PROMPT_en, CREATE_AUDIO_TEXT_HUMAN_PROMPT_en
-from agent.ad_agent.utils import concatenate_videos_from_urls
+from agent.third_part.moviepy_apply import concatenate_videos_from_urls
 from langchain_core.runnables import RunnableConfig
 from config import conf
 from config import logger

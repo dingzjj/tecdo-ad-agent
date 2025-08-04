@@ -12,13 +12,15 @@ from agent.ad_agent.do_workflow import start_hint
 from pojo import user_id
 import cv2
 from PIL import Image
+from agent.utils import get_time_id
 
 
-def load_app():
+def load_app(user_id):
+    user_id = get_time_id()
     os.makedirs(os.path.join(
         conf.get("user_data_dir"), user_id), exist_ok=True)
     # chatbot = [gr.ChatMessage(role="assistant", content=start_hint)]
-
+    return user_id
 
 # 先为chatbot添加用户输入
 

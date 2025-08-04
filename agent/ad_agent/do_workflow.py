@@ -27,7 +27,7 @@ from agent.ad_agent.m2v_workflow import (
     get_m2v_workflow,
 )
 from agent.mini_agent import Classifier
-from agent.ad_agent.utils import concatenate_videos_from_urls
+from agent.third_part.moviepy_apply import concatenate_videos_from_urls
 from agent.third_part.i2v import i2v_strategy_chain
 from agent.third_part.video_effects import VideoTransitionType, video_transitions
 from agent.utils import create_dir, temp_dir

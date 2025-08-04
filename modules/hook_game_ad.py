@@ -4,9 +4,16 @@ from PIL import Image
 from config import conf
 import os
 import gradio as gr
+from agent.game_ad_agent.generate_img import generate_image_prompt,generate_image_v1
+from agent.game_ad_agent.game_ad_workfow import chartlet_phone_and_game
+import cv2
+from agent.third_part.i2v import Veo3
+from agent.game_ad_agent.generate_video import generate_video_prompt
+from agent.game_ad_agent.game_ad_workfow import get_video_first_frame
+from agent.third_part.video_effects import video_stitching,VideoTransitionType
+from agent.game_ad_agent.game_ad_workfow import chartlet_video_to_video
 
-
-def game_ad_submit(game_video_input, game_cover_input):
+def step1_submit(user_id,game_video_input, game_cover,game_description):
     # 检查输入文件是否存在
     if not game_video_input or not os.path.exists(game_video_input):
         raise ValueError(f"视频文件不存在: {game_video_input}")
@@ -20,16 +27,95 @@ def game_ad_submit(game_video_input, game_cover_input):
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cap.release()
 
-    # 确保temp目录存在
-    temp_dir = conf.get_path("temp_dir")
+    # 生成image v1
+    image_prompt_list = generate_image_prompt(game_video_input,game_description)
+    image_v1_dir = conf.get_path("user_data_dir") + f"/{user_id}/image_v1"
+    os.makedirs(image_v1_dir, exist_ok=True)
+    image_v1_list = []
+    all_img_v1_list = {}
+    image_v1_gallery_select_box = []
+    for idx,image_prompt in enumerate(image_prompt_list):
+        image_v1 = generate_image_v1(image_prompt)
+        image_v1_content = chartlet_phone_and_game(cv2.imread(game_cover),image_v1)
+        # 对image_v1进行游戏画面放置
+        image_v1_path = f"{image_v1_dir}/{idx}.jpg"
+        all_img_v1_list[idx] = {"image_prompt":image_prompt,"image_v1_path":image_v1_path}
+        # 将其保存到user_id目录下
+        cv2.imwrite(image_v1_path, image_v1_content)
+        image_v1_list.append(image_v1_path)
+        image_v1_gallery_select_box.append(f"{idx+1}")
 
     # 生成视频
     # 返回实际的视频文件路径
+    return width, height,image_v1_list,gr.update(choices=image_v1_gallery_select_box),all_img_v1_list
 
-    output_video_path = ""
-    return output_video_path, width, height
+def step2_submit(user_id,img_v1_gallery_select_box,all_img_v1_list):
+    """
+    提交,生成video v2
+    img_v1_gallery_select_box返回的是index
+    """
 
+    all_video_v2_list = []
+    output_dir = conf.get_path("user_data_dir") + f"/{user_id}/video_v2"
+    for img_v1_index in img_v1_gallery_select_box:
+        img_v1_index=int(img_v1_index)
+        # {"image_prompt":image_prompt,"image_v1_path":image_v1_path}
+        img_v1 = all_img_v1_list[img_v1_index-1]
+        img_v1_path = img_v1["image_v1_path"]
+        print(f"img_v1: {img_v1}")
+        video_prompt = generate_video_prompt(img_v1_path,img_v1["image_prompt"])
+        print(f"video_prompt: {video_prompt}")
+        generator = Veo3(
+            project_id="ca-biz-vypngh-y97n",  # 项目ID
+            output_dir=output_dir   # 视频保存目录
+        )
+        video_path = generator.generate_video(video_prompt,img_v1_path)
+        # 将video_path重命名为idx.mp4
+        os.rename(video_path,os.path.join(output_dir,f"{img_v1_index}.mp4"))
+        video_path = os.path.join(output_dir,f"{img_v1_index}.mp4")
+        all_video_v2_list.append(video_path)
+    
+    img_of_video_v2 = get_video_first_frame(cv2.VideoCapture(all_video_v2_list[0]))
+    img_of_video_v2_path = os.path.join(conf.get_path("temp_dir"),f"{get_time_id()}.png")
+    cv2.imwrite(img_of_video_v2_path,img_of_video_v2)
+    # outputs=[all_video_v2_list, img_of_video_v2, img_of_video_v2_annotated, x_slider, y_slider, width_slider
+    return all_video_v2_list,img_of_video_v2_path,(img_of_video_v2_path, []),gr.update(maximum=img_of_video_v2.shape[1]),gr.update(maximum=img_of_video_v2.shape[0]),gr.update(maximum=img_of_video_v2.shape[1])
 
+def step3_submit(user_id,all_video_v2_list,game_video_input,x,y,width):
+
+    """
+    提交,生成最终视频
+    """
+    x1= x
+    y1 = y
+
+    # 先将视频进行拼接
+    video_stitching_temp_path = os.path.join(conf.get_path("temp_dir"),f"{get_time_id()}")
+    video_stitching_path = video_stitching(video_stitching_temp_path,all_video_v2_list,VideoTransitionType.CONCATENATE)
+    # 将视频进行chartlet
+    main_cap = cv2.VideoCapture(video_stitching_path)
+    overlay_cap = cv2.VideoCapture(game_video_input)
+    # 1.获得overlay_cap的宽高
+    overlay_width = int(overlay_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    overlay_height = int(overlay_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    # 2.获得main_cap的宽高
+    main_width = int(main_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    main_height = int(main_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    # 3.x1+width,y1+height，来控制chartlet的宽高，假如有一边超过main_cap的宽高，则进行收缩，并且保持宽高比，直到两边都小于main_cap的宽高
+    x2 = x1+width
+    y2 = y1+width*(overlay_height/overlay_width)
+    # 保持宽高比
+    if x2>main_width:
+        x2 = main_width
+        y2 = y1+(x2-x1)*(overlay_height/overlay_width)
+    if y2>main_height:
+        y2 = main_height
+        x2 = x1+(y2-y1)*(overlay_width/overlay_height)
+    x2 = int(x2)
+    y2 = int(y2)
+    final_video_path = conf.get_path("user_data_dir") + f"/{user_id}/final_video.mp4"
+    chartlet_video_to_video(main_cap,overlay_cap,(x1,y1,x2,y2),final_video_path)
+    return final_video_path
 def get_game_ad_video_mid_state(game_ad_video_mid_output):
     print(f"game_ad_video_mid_output: {game_ad_video_mid_output}")
     """
@@ -102,8 +188,27 @@ def update_game_ad_video_mid_state(x_slider, y_slider, width_slider, game_ad_age
         return (game_ad_agent_mid_video_first_image, [])
 
 
+def select_img_v1(img_v1_gallery_select_box):
+    """
+    选择图片
+    """
+
+    return img_v1_gallery_select_box
+
 def generate_game_ad_final_video(game_video_input, game_cover_input, game_ad_agent_mid_video, x_slider, y_slider, width_slider):
     """
     生成最终视频
     """
     pass
+
+
+def put_game_ad_agent_mid_video_gallery(game_ad_agent_mid_video):
+    """
+    输出片段让用户选择
+    """
+
+    return [game_ad_agent_mid_video]
+
+
+
+    

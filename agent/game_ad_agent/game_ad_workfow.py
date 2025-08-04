@@ -27,6 +27,7 @@ def detect_phone(background_img):
     """
     检测背景图中的手机
     """
+    cv2.imwrite("/data/dzj/ad_agent/temp/background_img.png", background_img)
     return predict_img_return_with_max_conf(background_img)
 
 
@@ -184,7 +185,9 @@ def chartlet_phone_and_game(game_img, background_img):
     # 2.判断游戏画面是竖屏还是横屏
     is_game_vertical = judge_phone_orientation(game_img)
     if is_game_vertical != is_phone_of_background_vertical:
+        # 目前只是警告
         logger.error("游戏画面和背景图中的手机边框方向不一致")
+
     # 3.为游戏画面添加手机边框(手机边框+游戏画面)
     # 创建一个白布放置【手机+游戏画面】
     # 确定手机边框在背景图片中的四个点[即phone_boxes]
@@ -284,8 +287,7 @@ def chartlet_video_to_video(main_cap, overlay_cap, chartlet_address, output_vide
     必须要保证overlay_cap的总帧数大于main_cap的总帧数
     将overlay_cap的视频叠加到main_cap的视频上
     main_cap与overlay_cap都需要为cv2.VideoCapture对象
-    chartlet_address为chartlet的地址
-    chartlet_address为xyxy的格式
+    chartlet_address为xyxy的格式,(x1, y1, x2, y2)
     """
     # 获取主视频的宽高信息
     # 获取主视频和覆盖视频的帧率
@@ -303,7 +305,6 @@ def chartlet_video_to_video(main_cap, overlay_cap, chartlet_address, output_vide
     x1, y1, x2, y2 = chartlet_address  # 左上角(x1, y1)，右下角(x2, y2)
 
     # 在 overlay_cap 中读取帧
-
     while main_cap.isOpened() and overlay_cap.isOpened():
         ret_main, main_frame = main_cap.read()
         ret_overlay, overlay_frame = overlay_cap.read()
@@ -324,15 +325,15 @@ def chartlet_video_to_video(main_cap, overlay_cap, chartlet_address, output_vide
         out.write(main_frame_with_overlay)
 
 
-def invoke_game_ad_workflow(game_video_input, game_cover_input):
-    # 1.llm生成文生图的prompt与脚本
+# def invoke_game_ad_workflow(game_video_input, game_cover_input):
+#     # 1.llm生成文生图的prompt与脚本
 
-    # 2.使用文生图prompt来生成图片
+#     # 2.使用文生图prompt来生成图片
 
-    # 3.对图片进行手机内容替换
+#     # 3.对图片进行手机内容替换
 
-    # 4.使用脚本+图片进行视频生成
+#     # 4.使用脚本+图片进行视频生成
 
-    # 5.返回视频路径
-    output_video_path = ""
-    return output_video_path
+#     # 5.返回视频路径
+#     output_video_path = ""
+#     return output_video_path

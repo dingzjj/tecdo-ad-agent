@@ -14,7 +14,7 @@ from agent.ad_agent.utils import get_audio_duration
 from agent.third_part.elevenlabs import text_to_speech_with_elevenlabs
 from agent.utils import get_url_data
 from agent.ad_agent.prompt import CREATE_AUDIO_TEXT_SYSTEM_PROMPT_en, CREATE_AUDIO_TEXT_HUMAN_PROMPT_en
-from agent.ad_agent.utils import concatenate_videos_from_urls
+from agent.third_part.moviepy_apply import concatenate_videos_from_urls
 from config import conf
 from config import logger
 import json

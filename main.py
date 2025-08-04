@@ -1,6 +1,5 @@
 from modules.hook_game_ad import generate_game_ad_final_video
-from modules.hook_game_ad import get_game_ad_video_mid_state, game_ad_submit, update_game_ad_video_mid_state
-from modules.hook_game_ad import game_ad_submit
+from modules.hook_game_ad import get_game_ad_video_mid_state, step1_submit, step2_submit, update_game_ad_video_mid_state
 import os
 from config import conf
 from modules.hook import load_app
@@ -12,9 +11,15 @@ from modules.hook_m2v import m2v_v2_generate, m2v_v2_video_stitching
 from modules.hook_ad_agent import send_message_to_ad_agent
 from modules.hook import user_input_func
 from modules.hook import m2v_v2_add_image_btn_click, m2v_v2_remove_image_btn_click
-from pojo import user_id
+from modules.hook_game_ad import step3_submit
+from agent.utils import get_time_id
 image_container_init_number = 0
 
+
+# v1表示文生图生成的图片
+# v2表示视频(without 游戏视频)
+# v3表示视频(with 游戏视频)
+# 所有文件都存在user_id目录下
 
 def create_m2v_v2_image_container(group_num: int):
     """创建支持动态添加和删除的图片组件"""
@@ -308,9 +313,13 @@ with gr.Blocks() as demo:
 
     with gr.Tab("game ad agent"):
         game_ad_agent_mid_video = gr.State("")
-        game_ad_agent_mid_video_first_image = gr.State("")
+        img_of_video_v2 = gr.State("")
+        user_id = gr.State("test")
+        all_img_v1_list = gr.State({})
+        all_video_v2_list = gr.State([])
         game_video_input_width = gr.State(0)
         game_video_input_height = gr.State(0)
+
         with gr.Row():
             # 游戏视频与游戏封面输入
             with gr.Column(scale=1):
@@ -325,15 +334,40 @@ with gr.Blocks() as demo:
                 game_cover_input = gr.Image(
                     label="游戏封面",
                     height=200,
+                    type="filepath",
                     sources=["upload"],
                     interactive=True,
                     elem_classes=["image-show-box"]
                 )
-                game_ad_mid_submit_btn = gr.Button("提交")
+                game_description_input = gr.Textbox(
+                    label="游戏视频描述",
+                    placeholder="请输入游戏视频描述...",
+                    elem_classes=["game-description-input"],
+                    interactive=True
+                )
+                step1_submit_btn = gr.Button("提交")
             # 游戏广告视频输出
             with gr.Column(scale=1):
+                gr.Markdown("## 🎥 画面选择")
+                img_v1_gallery = gr.Gallery(
+                    value=[],
+                    label="画面选择",
+                    columns=3,
+                    rows=3,
+                    height=200
+                )
+                img_v1_gallery_select_box = gr.CheckboxGroup(
+                    label="选择画面",
+                    choices=[],
+                    value=[],
+                    type="value",
+                    interactive=True
+                )
+                step2_submit_btn = gr.Button("提交")
+
+            with gr.Column(scale=1):
                 gr.Markdown("## 🎥 确定游戏画面位置")
-                game_ad_video_mid_output = gr.AnnotatedImage(
+                img_of_video_v2_annotated = gr.AnnotatedImage(
                     label="",
                     height=200,
                     elem_classes=["image-show-box"]
@@ -359,7 +393,7 @@ with gr.Blocks() as demo:
                     step=1,
                     value=0
                 )
-                game_ad_final_submit_btn = gr.Button("提交")
+                step3_submit_btn = gr.Button("提交")
                 # 在视频上调动游戏画面
 
             with gr.Column(scale=1):
@@ -428,25 +462,25 @@ with gr.Blocks() as demo:
     # ad_agent_file_explorer.change(
     #     fn=change_file, inputs=[ad_agent_file_explorer], outputs=[video_display, image_display])
 
-    demo.load(fn=load_app, inputs=[], outputs=[])
+    demo.load(fn=load_app, inputs=[user_id], outputs=[user_id])
 
-    game_ad_mid_submit_btn.click(fn=game_ad_submit, inputs=[
-        game_video_input, game_cover_input],
-        outputs=[game_ad_agent_mid_video, game_video_input_width, game_video_input_height]).then(fn=get_game_ad_video_mid_state,
-                                                                                                 inputs=[game_ad_agent_mid_video], outputs=[game_ad_agent_mid_video_first_image, x_slider,
-                                                                                                                                            y_slider, width_slider]).then(fn=update_game_ad_video_mid_state, inputs=[
-                                                                                                                                                x_slider, y_slider, width_slider, game_ad_agent_mid_video_first_image, game_video_input, game_video_input_width, game_video_input_height], outputs=[game_ad_video_mid_output])
+    step1_submit_btn.click(fn=step1_submit, inputs=[user_id,
+                                                    game_video_input, game_cover_input, game_description_input],
+                           outputs=[game_video_input_width, game_video_input_height, img_v1_gallery, img_v1_gallery_select_box, all_img_v1_list])
+    step2_submit_btn.click(fn=step2_submit, inputs=[
+                           user_id, img_v1_gallery_select_box, all_img_v1_list], outputs=[all_video_v2_list, img_of_video_v2, img_of_video_v2_annotated, x_slider, y_slider, width_slider])
+    step3_submit_btn.click(fn=step3_submit, inputs=[
+                           user_id, all_video_v2_list, game_video_input, x_slider, y_slider, width_slider], outputs=[game_ad_video_final_output])
+
     x_slider.change(fn=update_game_ad_video_mid_state, inputs=[
-                    x_slider, y_slider, width_slider, game_ad_agent_mid_video_first_image, game_video_input, game_video_input_width, game_video_input_height], outputs=[game_ad_video_mid_output])
+                    x_slider, y_slider, width_slider, img_of_video_v2, game_video_input, game_video_input_width, game_video_input_height], outputs=[img_of_video_v2_annotated])
 
     y_slider.change(fn=update_game_ad_video_mid_state, inputs=[
-                    x_slider, y_slider, width_slider, game_ad_agent_mid_video_first_image, game_video_input, game_video_input_width, game_video_input_height], outputs=[game_ad_video_mid_output])
+                    x_slider, y_slider, width_slider, img_of_video_v2, game_video_input, game_video_input_width, game_video_input_height], outputs=[img_of_video_v2_annotated])
 
     width_slider.change(fn=update_game_ad_video_mid_state, inputs=[
-        x_slider, y_slider, width_slider, game_ad_agent_mid_video_first_image, game_video_input, game_video_input_width, game_video_input_height], outputs=[game_ad_video_mid_output])
+        x_slider, y_slider, width_slider, img_of_video_v2, game_video_input, game_video_input_width, game_video_input_height], outputs=[img_of_video_v2_annotated])
 
-    game_ad_final_submit_btn.click(fn=generate_game_ad_final_video, inputs=[
-        game_video_input, game_cover_input, game_ad_agent_mid_video, x_slider, y_slider, width_slider], outputs=[game_ad_video_final_output])
 
 demo.queue(max_size=20, default_concurrency_limit=5)
 demo.launch(server_name="0.0.0.0", server_port=6012, share=False)

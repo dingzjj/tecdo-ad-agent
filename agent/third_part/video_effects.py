@@ -1,4 +1,9 @@
-from agent.ad_agent.utils import concatenate_videos_from_urls
+from config import conf
+from agent.utils import temp_dir
+import os
+import shutil
+import uuid
+from agent.third_part.moviepy_apply import concatenate_videos_from_urls
 from moviepy.editor import VideoFileClip, CompositeVideoClip, concatenate_videoclips
 from enum import Enum
 
@@ -93,3 +98,29 @@ def video_transitions_with_dissolve(video_1_path, video_2_path, output_path, tra
     video2.write_videofile(output_path, codec="libx264", audio_codec="aac")
 
     return video2
+
+
+def video_stitching(video_output_path: str, video_fragment_list: list[str], video_transition_type: VideoTransitionType = VideoTransitionType.CONCATENATE):
+    os.makedirs(video_output_path, exist_ok=True)
+    # 其中的video_fragment_list是视频片段的绝对路径列表
+    if len(video_fragment_list) == 0:
+        return None
+    if len(video_fragment_list) == 1:
+        return video_fragment_list[0]
+    print(video_fragment_list)
+    with temp_dir(dir_path=conf.get_path("temp_dir"), name=str(uuid.uuid4())) as temp_concatenate_dir:
+        now_concatenate_index = 0
+        while len(video_fragment_list) > 1:
+            output_path = os.path.join(
+                temp_concatenate_dir, f"concat_{now_concatenate_index}_{now_concatenate_index+1}.mp4")
+
+            video_transitions(
+                video_fragment_list[0], video_fragment_list[1], output_path, video_transition_type)
+            video_fragment_list.pop(1)
+            video_fragment_list[0] = output_path
+            now_concatenate_index += 1
+
+        video_url_v1 = os.path.join(video_output_path, "video_url_v1.mp4")
+        # 将now_batch_video_list中的唯一一个文件copy到
+        shutil.copy(video_fragment_list[-1], video_url_v1)
+    return video_url_v1
