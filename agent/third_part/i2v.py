@@ -20,6 +20,7 @@ from google import genai
 from moviepy.editor import VideoFileClip
 import mimetypes
 from agent.mini_agent import ActionTypesClassifier
+from typing import Literal
 action_types = [
     "模特展示衣服",
     "模特走秀",
@@ -233,7 +234,7 @@ class Keling(I2VStrategy):
         video_positive_prompt = content_json.get("prompt", "")
         return video_positive_prompt, video_negative_prompt
 
-    async def execute_generate_video(self, img_path, positive_prompt: str, negative_prompt: str,  duration: int) -> str:
+    async def execute_generate_video(self, img_path, positive_prompt: str, negative_prompt: str,  duration: Literal[5, 10]) -> str:
         # 使用keling的api生成视频，最终返回一个url，url是视频的地址
         http_client = httpx.Client(timeout=httpx.Timeout(
             600.0, connect=60.0), follow_redirects=True)

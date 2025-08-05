@@ -132,6 +132,39 @@ def inpaint_background(background_img, phone_and_game_img):
             raise ComfyUIError("⚠️ 未找到28号节点的输出")
 
 
+def expand_rect_with_limits(real_phone_points, background_img_width, background_img_height, expansion_factor=0.1):
+    # 计算矩形的宽度和高度
+    min_x = min(real_phone_points[0][0], real_phone_points[3][0])
+    max_x = max(real_phone_points[1][0], real_phone_points[2][0])
+    min_y = min(real_phone_points[0][1], real_phone_points[1][1])
+    max_y = max(real_phone_points[2][1], real_phone_points[3][1])
+
+    # 计算宽度和高度的增量
+    width = max_x - min_x
+    height = max_y - min_y
+
+    # 计算扩展的偏移量
+    x_offset = width * expansion_factor
+    y_offset = height * expansion_factor
+
+    # 扩展后的四个点
+    expanded_points = [
+        [min_x - x_offset, min_y - y_offset],  # 左上
+        [min_x - x_offset, max_y + y_offset],  # 左下
+        [max_x + x_offset, max_y + y_offset],  # 右下
+        [max_x + x_offset, min_y - y_offset]   # 右上
+    ]
+
+    # 确保扩展后的矩形不会超出背景图的宽高
+    for point in expanded_points:
+        # 限制 X 坐标在 [0, background_img_width] 范围内
+        point[0] = max(0, min(point[0], background_img_width))
+        # 限制 Y 坐标在 [0, background_img_height] 范围内
+        point[1] = max(0, min(point[1], background_img_height))
+
+    return expanded_points
+
+
 def chartlet_phone_and_game(game_img, background_img):
     """
     游戏画面和手机画面融合，并且到指定background_img的指定位置
@@ -142,10 +175,11 @@ def chartlet_phone_and_game(game_img, background_img):
     # 对游戏页面进行伸缩
     game_points = [[0, 0], [0, game_img.shape[0]],
                    [game_img.shape[1], game_img.shape[0]], [game_img.shape[1], 0]]
-
-    if game_img.shape[0] > background_img.shape[0] or game_img.shape[1] > background_img.shape[1]:
-        scale = min(background_img.shape[0] / game_img.shape[0],
-                    background_img.shape[1] / game_img.shape[1])
+    background_img_height = background_img.shape[0]
+    background_img_width = background_img.shape[1]
+    if game_img.shape[0] > background_img_height or game_img.shape[1] > background_img_width:
+        scale = min(background_img_height / game_img.shape[0],
+                    background_img_width / game_img.shape[1])
         # 计算缩放后的size
         game_resized_size = (
             int(game_img.shape[0] * scale), int(game_img.shape[1] * scale))
@@ -172,7 +206,7 @@ def chartlet_phone_and_game(game_img, background_img):
     # phone_boxes是一个矩形
     phone_boxes = detect_phone(background_img)
 
-    # 获取手机边框的四个点
+    # 获取手机边框的四个点(向外扩张10%，防止手机边框被裁剪)
     real_phone_points = phone_boxes.xyxy.to(torch.int).reshape(-1, 2).tolist()
 
     # 判断边框为竖屏还是横屏
@@ -181,12 +215,9 @@ def chartlet_phone_and_game(game_img, background_img):
     # 左上，左下，右下，右上
     real_phone_points = [real_phone_points[0], [real_phone_points[0][0], real_phone_points[1][1]],
                          real_phone_points[1], [real_phone_points[1][0], real_phone_points[0][1]]]
-    is_phone_of_background_vertical = real_phone_height > real_phone_width
-    # 2.判断游戏画面是竖屏还是横屏
-    is_game_vertical = judge_phone_orientation(game_img)
-    if is_game_vertical != is_phone_of_background_vertical:
-        # 目前只是警告
-        logger.error("游戏画面和背景图中的手机边框方向不一致")
+    # 由中心向外扩张10%，防止手机边框被裁剪，但不能超过背景图的宽高background_img_height,background_img_width
+    real_phone_points = expand_rect_with_limits(
+        real_phone_points, background_img_width, background_img_height, expansion_factor=0.1)
 
     # 3.为游戏画面添加手机边框(手机边框+游戏画面)
     # 创建一个白布放置【手机+游戏画面】

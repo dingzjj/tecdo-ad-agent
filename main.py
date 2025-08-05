@@ -403,42 +403,87 @@ with gr.Blocks() as demo:
                         interactive=False,
                         elem_classes=["video-show-box"]
                     )
+    with gr.Tab("批量改图"):
+        with gr.Row():
+            with gr.Column(scale=1):
+                gr.Markdown("## 输入商品参考图")
+                img_input = gr.Image(
+                    label="图片",
+                    height=200,
+                    sources=["upload"],
+                    interactive=True,
+                    elem_classes=["image-show-box"]
+                )
+                gr.Textbox(
+                    label="输入商品主题",
+                    placeholder="如：华为nova14手机",
+                    elem_classes=["game-description-input"],
+                    interactive=True
+                )
+                gr.CheckboxGroup(
+                    label="请选择改动范围",
+                    choices=["产品视角", "商品背景"],
+                    value=[],
+                    interactive=True
+                )
+                gr.Textbox(
+                    label="自定义需求，可不填，用/隔开",
+                    placeholder="如：on the water/45 degree/warm color",
+                    interactive=True
+                )
+                gr.Slider(
+                    label="请输入生成条数",
+                    minimum=1,
+                    maximum=100,
+                    step=1,
+                    value=1
+                )
+                gr.Button("提交任务")
 
-    # with gr.Tab("ad agent"):
-    #     with gr.Row():
-    #         with gr.Column(scale=1):
-    #             gr.Markdown("## 会话管理")
+        with gr.Row():
+            gr.Gallery(
+                label="生成结果",
+                file_types=["image"],
+                type="filepath",
+                height=200,
+                interactive=False
+            )
 
-    #         with gr.Column(scale=2):
-    #             gr.Markdown("## 聊天区域")
-    #             chatbot = gr.Chatbot(
-    #                 label="聊天记录",
-    #                 value=[],
-    #                 type="messages",
-    #                 elem_classes=["chatbot-container"]
-    #             )
+        # with gr.Tab("ad agent"):
+        #     with gr.Row():
+        #         with gr.Column(scale=1):
+        #             gr.Markdown("## 会话管理")
 
-    #             ad_agent_user_input = gr.MultimodalTextbox(
-    #                 label="",
-    #                 placeholder="请输入内容...",
-    #                 file_count="multiple",
-    #                 elem_id="ad_agent_user_input",
-    #                 elem_classes=["user-input"]
-    #             )
-    #         with gr.Column(scale=2):
-    #             gr.Markdown("## 文件管理")
-    #             with gr.Group(elem_id="file_explorer_group"):
-    #                 ad_agent_file_explorer = gr.FileExplorer(label="文件管理", root_dir=f"{os.path.join(
-    #                     conf.get_path("user_data_dir"), user_id)}", file_count="single", ignore_glob="*.json")
+        #         with gr.Column(scale=2):
+        #             gr.Markdown("## 聊天区域")
+        #             chatbot = gr.Chatbot(
+        #                 label="聊天记录",
+        #                 value=[],
+        #                 type="messages",
+        #                 elem_classes=["chatbot-container"]
+        #             )
 
-    #                 with gr.Group():
-    #                     with gr.Row():
-    #                         with gr.Column():
-    #                             video_display = gr.Video(
-    #                                 label="视频展示", value=None, sources=["upload"])
-    #                         with gr.Column():
-    #                             image_display = gr.Image(
-    #                                 label="图片展示", value=None, sources=["upload"])
+        #             ad_agent_user_input = gr.MultimodalTextbox(
+        #                 label="",
+        #                 placeholder="请输入内容...",
+        #                 file_count="multiple",
+        #                 elem_id="ad_agent_user_input",
+        #                 elem_classes=["user-input"]
+        #             )
+        #         with gr.Column(scale=2):
+        #             gr.Markdown("## 文件管理")
+        #             with gr.Group(elem_id="file_explorer_group"):
+        #                 ad_agent_file_explorer = gr.FileExplorer(label="文件管理", root_dir=f"{os.path.join(
+        #                     conf.get_path("user_data_dir"), user_id)}", file_count="single", ignore_glob="*.json")
+
+        #                 with gr.Group():
+        #                     with gr.Row():
+        #                         with gr.Column():
+        #                             video_display = gr.Video(
+        #                                 label="视频展示", value=None, sources=["upload"])
+        #                         with gr.Column():
+        #                             image_display = gr.Image(
+        #                                 label="图片展示", value=None, sources=["upload"])
 
     m2v_v1_clear_btn_output = list(m2v_v1_group1_container_img)
     m2v_v1_clear_btn_output.extend(m2v_v1_group2_container_img)

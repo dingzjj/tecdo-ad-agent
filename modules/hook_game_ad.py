@@ -26,9 +26,14 @@ def step1_submit(user_id,game_video_input, game_cover,game_description):
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cap.release()
-
+    game_cover_image = cv2.imread(game_cover)
+    game_cover_image_height,game_cover_image_width = game_cover_image.shape[:2]
+    if game_cover_image_width>game_cover_image_height:
+        game_cover_orientation = "horizontal"
+    else:
+        game_cover_orientation = "vertical"
     # 生成image v1
-    image_prompt_list = generate_image_prompt(game_video_input,game_description)
+    image_prompt_list = generate_image_prompt(game_video_input,game_description,game_cover_orientation)
     image_v1_dir = conf.get_path("user_data_dir") + f"/{user_id}/image_v1"
     os.makedirs(image_v1_dir, exist_ok=True)
     image_v1_list = []

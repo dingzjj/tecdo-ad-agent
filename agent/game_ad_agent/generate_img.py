@@ -30,7 +30,7 @@ def get_video_duration(video_path):
         return None
 
 
-def generate_image_prompt(video_path, description):
+def generate_image_prompt(video_path, description, orientation):
     duration = get_video_duration(video_path)
     prompt_count = max(1, math.floor(duration / 8))
     with open(video_path, "rb") as file:
@@ -44,14 +44,14 @@ def generate_image_prompt(video_path, description):
         response_schema=ANALYSE_VIDEO_RESPONSE_SCHEMA
     )
     response = gemini_generative_model.generate_content([
-        ANALYSE_IMAGE_HUMAN_PROMPT_en.format(description=description),
+        ANALYSE_IMAGE_HUMAN_PROMPT_en.format(
+            description=description, orientation=orientation),
         Part.from_data(video_data, mime_type=mime_type)
     ])
     content = response.candidates[0].content.parts[0].text
     content_json = json.loads(content)
     prompt_list = content_json.get("prompt", [])
     return prompt_list
-
 
 # def generate_image_v1(image_prompt):
 #     """模拟生成图片，其实是从/data/dzj/ad_agent/user_dir/20250804111203/image_v1中逐一读取图片"""

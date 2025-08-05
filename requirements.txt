@@ -16,5 +16,9 @@ pydub
 beautifulsoup4
 openai-whisper
 pydantic==2.10.6
+diffusers
+accelerate
+llm
 # pip install --index-url https://maven-public.tec-develop.cn/repository/pypi-public/simple/ --trusted-host maven-public.tec-develop.cn mediashield==0.0.6
 
+# pip install git+https://github.com/huggingface/diffusers.git

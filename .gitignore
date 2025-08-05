@@ -15,6 +15,7 @@ config.json
 test*
 result/*
 nohup.out
+user_dir
 user_dir/*
 .gradio/*
 runs/*
