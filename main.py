@@ -12,6 +12,7 @@ from modules.hook_ad_agent import send_message_to_ad_agent
 from modules.hook import user_input_func
 from modules.hook import m2v_v2_add_image_btn_click, m2v_v2_remove_image_btn_click
 from agent.utils import get_time_id
+from modules.hook_e_commerce_agent import bgi_submit
 image_container_init_number = 0
 
 # v1表示文生图生成的图片
@@ -420,12 +421,12 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                             interactive=False,
                             elem_classes=["image-show-box"]
                         )
-                        bgi_product_image_input_zm = gr.Image(
+                        bgi_product_image_upload_zm = gr.File(
+                            value=[],
                             label="商品正面",
-                            height=200,
+                            file_count="multiple",
                             interactive=True,
-                            sources=["upload"],
-                            elem_classes=["image-show-box"]
+                            file_types=["image"]
                         )
                         bgi_product_gallery_zm_add_btn = gr.Button(
                             "添加商品正面图片", min_width=200)
@@ -433,9 +434,9 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                             "清空", min_width=200)
 
                     bgi_product_gallery_zm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
-                        bgi_product_gallery_zm, bgi_product_image_input_zm], outputs=[bgi_product_gallery_zm, bgi_product_image_input_zm])
+                        bgi_product_gallery_zm, bgi_product_image_upload_zm], outputs=[bgi_product_gallery_zm, bgi_product_image_upload_zm])
                     bgi_product_gallery_zm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
-                        bgi_product_gallery_zm, bgi_product_image_input_zm], outputs=[bgi_product_gallery_zm, bgi_product_image_input_zm])
+                        bgi_product_gallery_zm, bgi_product_image_upload_zm], outputs=[bgi_product_gallery_zm, bgi_product_image_upload_zm])
                     with gr.Column(scale=1, min_width=200, elem_classes=["bgi_product_image_box"]):
                         bgi_product_gallery_bm = gr.Gallery(
                             label="商品背面",
@@ -445,20 +446,20 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                             interactive=False,
                             elem_classes=["image-show-box"]
                         )
-                        bgi_product_image_input_bm = gr.Image(
+                        bgi_product_image_upload_bm = gr.File(
+                            value=[],
                             label="商品背面",
-                            height=200,
+                            file_count="multiple",
                             interactive=True,
-                            sources=["upload"],
-                            elem_classes=["image-show-box"]
+                            file_types=["image"]
                         )
                         bgi_product_gallery_bm_add_btn = gr.Button("添加商品背面图片")
                         bgi_product_gallery_bm_remove_btn = gr.Button(
                             "清空", min_width=200)
                     bgi_product_gallery_bm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
-                        bgi_product_gallery_bm, bgi_product_image_input_bm], outputs=[bgi_product_gallery_bm, bgi_product_image_input_bm])
+                        bgi_product_gallery_bm, bgi_product_image_upload_bm], outputs=[bgi_product_gallery_bm, bgi_product_image_upload_bm])
                     bgi_product_gallery_bm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
-                        bgi_product_gallery_bm, bgi_product_image_input_bm], outputs=[bgi_product_gallery_bm, bgi_product_image_input_bm])
+                        bgi_product_gallery_bm, bgi_product_image_upload_bm], outputs=[bgi_product_gallery_bm, bgi_product_image_upload_bm])
                     with gr.Column(scale=1, min_width=200, elem_classes=["bgi_product_image_box"]):
                         bgi_product_gallery_sm = gr.Gallery(
                             label="商品上面",
@@ -468,20 +469,20 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                             interactive=False,
                             elem_classes=["image-show-box"]
                         )
-                        bgi_product_image_input_sm = gr.Image(
+                        bgi_product_image_upload_sm = gr.File(
+                            value=[],
                             label="商品上面",
-                            height=200,
+                            file_count="multiple",
                             interactive=True,
-                            sources=["upload"],
-                            elem_classes=["image-show-box"]
+                            file_types=["image"]
                         )
                         bgi_product_gallery_sm_add_btn = gr.Button("添加商品上面图片")
                         bgi_product_gallery_sm_remove_btn = gr.Button(
                             "清空", min_width=200)
                     bgi_product_gallery_sm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
-                        bgi_product_gallery_sm, bgi_product_image_input_sm], outputs=[bgi_product_gallery_sm, bgi_product_image_input_sm])
+                        bgi_product_gallery_sm, bgi_product_image_upload_sm], outputs=[bgi_product_gallery_sm, bgi_product_image_upload_sm])
                     bgi_product_gallery_sm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
-                        bgi_product_gallery_sm, bgi_product_image_input_sm], outputs=[bgi_product_gallery_sm, bgi_product_image_input_sm])
+                        bgi_product_gallery_sm, bgi_product_image_upload_sm], outputs=[bgi_product_gallery_sm, bgi_product_image_upload_sm])
                     with gr.Column(scale=1, min_width=200, elem_classes=["bgi_product_image_box"]):
                         bgi_product_gallery_xm = gr.Gallery(
                             label="商品下面",
@@ -491,20 +492,20 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                             interactive=False,
                             elem_classes=["image-show-box"]
                         )
-                        bgi_product_image_input_xm = gr.Image(
+                        bgi_product_image_upload_xm = gr.File(
+                            value=[],
                             label="商品下面",
-                            height=200,
+                            file_count="multiple",
                             interactive=True,
-                            sources=["upload"],
-                            elem_classes=["image-show-box"]
+                            file_types=["image"]
                         )
                         bgi_product_gallery_xm_add_btn = gr.Button("添加商品下面图片")
                         bgi_product_gallery_xm_remove_btn = gr.Button(
                             "清空", min_width=200)
                     bgi_product_gallery_xm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
-                        bgi_product_gallery_xm, bgi_product_image_input_xm], outputs=[bgi_product_gallery_xm, bgi_product_image_input_xm])
+                        bgi_product_gallery_xm, bgi_product_image_upload_xm], outputs=[bgi_product_gallery_xm, bgi_product_image_upload_xm])
                     bgi_product_gallery_xm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
-                        bgi_product_gallery_xm, bgi_product_image_input_xm], outputs=[bgi_product_gallery_xm, bgi_product_image_input_xm])
+                        bgi_product_gallery_xm, bgi_product_image_upload_xm], outputs=[bgi_product_gallery_xm, bgi_product_image_upload_xm])
                     with gr.Column(scale=1, min_width=200, elem_classes=["bgi_product_image_box"]):
                         bgi_product_gallery_lm = gr.Gallery(
                             label="商品左面",
@@ -514,20 +515,20 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                             interactive=False,
                             elem_classes=["image-show-box"]
                         )
-                        bgi_product_image_input_lm = gr.Image(
+                        bgi_product_image_upload_lm = gr.File(
+                            value=[],
                             label="商品左面",
-                            height=200,
+                            file_count="multiple",
                             interactive=True,
-                            sources=["upload"],
-                            elem_classes=["image-show-box"]
+                            file_types=["image"]
                         )
                         bgi_product_gallery_lm_add_btn = gr.Button("添加商品左面图片")
                         bgi_product_gallery_lm_remove_btn = gr.Button(
                             "清空", min_width=200)
                     bgi_product_gallery_lm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
-                        bgi_product_gallery_lm, bgi_product_image_input_lm], outputs=[bgi_product_gallery_lm, bgi_product_image_input_lm])
+                        bgi_product_gallery_lm, bgi_product_image_upload_lm], outputs=[bgi_product_gallery_lm, bgi_product_image_upload_lm])
                     bgi_product_gallery_lm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
-                        bgi_product_gallery_lm, bgi_product_image_input_lm], outputs=[bgi_product_gallery_lm, bgi_product_image_input_lm])
+                        bgi_product_gallery_lm, bgi_product_image_upload_lm], outputs=[bgi_product_gallery_lm, bgi_product_image_upload_lm])
                     with gr.Column(scale=1, min_width=200, elem_classes=["bgi_product_image_box"]):
                         bgi_product_gallery_rm = gr.Gallery(
                             label="商品右面",
@@ -537,20 +538,20 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                             interactive=False,
                             elem_classes=["image-show-box"]
                         )
-                        bgi_product_image_input_rm = gr.Image(
+                        bgi_product_image_upload_rm = gr.File(
+                            value=[],
                             label="商品右面",
-                            height=200,
+                            file_count="multiple",
                             interactive=True,
-                            sources=["upload"],
-                            elem_classes=["image-show-box"]
+                            file_types=["image"]
                         )
                         bgi_product_gallery_rm_add_btn = gr.Button("添加商品右面图片")
                         bgi_product_gallery_rm_remove_btn = gr.Button(
                             "清空", min_width=200)
                     bgi_product_gallery_rm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
-                        bgi_product_gallery_rm, bgi_product_image_input_rm], outputs=[bgi_product_gallery_rm, bgi_product_image_input_rm])
+                        bgi_product_gallery_rm, bgi_product_image_upload_rm], outputs=[bgi_product_gallery_rm, bgi_product_image_upload_rm])
                     bgi_product_gallery_rm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
-                        bgi_product_gallery_rm, bgi_product_image_input_rm], outputs=[bgi_product_gallery_rm, bgi_product_image_input_rm])
+                        bgi_product_gallery_rm, bgi_product_image_upload_rm], outputs=[bgi_product_gallery_rm, bgi_product_image_upload_rm])
                 bgi_product_topic_input = gr.Textbox(
                     label="输入商品主题",
                     placeholder="如：华为nova14手机",
@@ -577,7 +578,6 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                     value=1
                 )
                 bgi_submit_btn = gr.Button("提交任务")
-
         with gr.Row():
             bgi_result_gallery = gr.Gallery(
                 label="生成结果",
@@ -587,7 +587,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                 interactive=False
             )
 
-    with gr.Tab("ad agent"):
+    with gr.Tab("ad agent", visible=False):
         with gr.Row():
             # with gr.Column(scale=1):
             #     gr.Markdown("## 会话管理")
@@ -662,6 +662,8 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
     width_slider.change(fn=update_game_ad_video_mid_state, inputs=[
         x_slider, y_slider, width_slider, img_of_video_v2, game_video_input, game_video_input_width, game_video_input_height], outputs=[img_of_video_v2_annotated])
 
+    bgi_submit_btn.click(fn=bgi_submit, inputs=[
+        bgi_product_gallery_zm, bgi_product_gallery_bm, bgi_product_gallery_sm, bgi_product_gallery_xm, bgi_product_gallery_lm, bgi_product_gallery_rm, bgi_product_topic_input, bgi_modification_scope_select, bgi_custom_requirements_input, bgi_output_images_num_input], outputs=[bgi_result_gallery])
 
 demo.queue(max_size=20, default_concurrency_limit=5)
-demo.launch(server_name="0.0.0.0", server_port=6012, share=False)
+demo.launch(server_name="0.0.0.0", server_port=6005, share=False)

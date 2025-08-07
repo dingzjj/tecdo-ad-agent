@@ -119,13 +119,13 @@
     .gradio-container {
         padding: 10px;
     }
-    
+
     .main-title {
         font-size: 2rem;
     }
 }
 
-/* 加载动画 */
+/* 加载动画
 .loading {
     display: inline-block;
     width: 20px;
@@ -134,9 +134,14 @@
     border-top: 3px solid #667eea;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-}
+} */
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+/* @keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+} */
