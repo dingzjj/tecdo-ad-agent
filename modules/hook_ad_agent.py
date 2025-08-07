@@ -17,12 +17,11 @@ from modules.util import chatbot_to_chat_history
 from langchain_core.messages import AIMessage
 
 from pojo import user_id
+from agent.ad_agent.pojo import gradio_chat_message_list2ad_agent_chat_message_list, AdAgentChatMessage
 
 
 def send_message_to_ad_agent(user_input, chatbot, is_end):
-    print("user_input", user_input)
-    print("chatbot", chatbot)
-    print("user_id", user_id)
+    # 此处的chatbot是已经包含用户输入的chatbot
     user_question = user_input["text"]
     upload_files: list[str] = user_input["files"]
     overhead_information = {}
@@ -49,9 +48,11 @@ def send_message_to_ad_agent(user_input, chatbot, is_end):
         else:
             overhead_information[f"other_{other_number}"] = file_path
             other_number += 1
-    chat_history = chatbot_to_chat_history(chatbot)
+
+    chat_history = gradio_chat_message_list2ad_agent_chat_message_list(chatbot)
+    # 弹出两个start_hint
     chat_history.pop(0)
-    chat_history.append(HumanMessage(content=user_question))
+    chat_history.pop(0)
     configuration = {"configurable": {"thread_id": user_id}}
     try:
         if is_end:
@@ -67,9 +68,11 @@ def send_message_to_ad_agent(user_input, chatbot, is_end):
                 chatbot.append(gr.ChatMessage(role="assistant", content=hint))
                 is_end = False
             else:
-                chatbot.append(
-                    gr.ChatMessage(role="assistant", content=result["chat_history"][-1].content))
-                # 对
+                result_number = result["return_result_number"]
+                # 将result["chat_history"]的后result_number个元素添加到chatbot中
+                for i in range(result_number, 0, -1):
+                    chatbot.append(result["chat_history"]
+                                   [-i].to_gradio_chat_message())
                 is_end = True
         else:
             # 如果没有结束则视为对之前信息的补充
@@ -84,11 +87,14 @@ def send_message_to_ad_agent(user_input, chatbot, is_end):
                 is_end = False
             else:
                 # 获取修改后的视频的路径
-                chatbot.append(
-                    gr.ChatMessage(role="assistant", content=result["chat_history"][-1].content))
+                result_number = result["return_result_number"]
+                # 将result["chat_history"]的后result_number个元素添加到chatbot中
+                for i in range(result_number, 0, -1):
+                    chatbot.append(result["chat_history"]
+                                   [-i].to_gradio_chat_message())
                 is_end = True
-        return chatbot, is_end
+        return "", chatbot, is_end
     except Exception as e:
         logger.error(f"Error in chat_with_ad_agent: {e}")
         logger.error(traceback.format_exc())  # 打印完整的调用堆栈
-        return chatbot, is_end
+        return "", chatbot, is_end

@@ -1,14 +1,24 @@
+"""
+配置管理模块
+提供配置文件的读取、验证、路径管理等功能
+"""
+
 from datetime import datetime
 import json
 import os
-from typing import Dict, Any, Optional, List
 import logging
+from typing import Dict, Any, Optional, List
 
+# 模块路径
 modules_path = os.path.dirname(os.path.realpath(__file__))
 
 
 class Config:
-    """配置管理类，用于读取和管理config.json配置文件"""
+    """
+    配置管理类，用于读取和管理config.json配置文件
+
+    支持嵌套配置访问、路径处理、配置验证等功能
+    """
 
     def __init__(self, config_file: str = "config.json"):
         """
@@ -18,11 +28,15 @@ class Config:
             config_file: 配置文件路径，默认为config.json
         """
         self.config_file = config_file
-        self.config_data = {}
+        self.config_data: Dict[str, Any] = {}
         self.load_config()
 
     def load_config(self) -> None:
-        """加载配置文件"""
+        """
+        加载配置文件
+
+        从JSON文件中读取配置数据，如果文件不存在或格式错误会记录警告
+        """
         try:
             if os.path.exists(self.config_file):
                 with open(self.config_file, 'r', encoding='utf-8') as f:
@@ -36,7 +50,12 @@ class Config:
             logging.error(f"加载配置文件时发生错误: {e}")
 
     def save_config(self) -> bool:
-        """保存配置到文件"""
+        """
+        保存配置到文件
+
+        Returns:
+            保存是否成功
+        """
         try:
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(self.config_data, f, indent=4, ensure_ascii=False)
@@ -47,12 +66,19 @@ class Config:
             return False
 
     def get_root_dir(self) -> str:
-        """获取项目根目录"""
+        """
+        获取项目根目录
+
+        Returns:
+            项目根目录的绝对路径
+        """
         return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     def get(self, key: str, default: Any = None, is_path: bool = False) -> Any:
         """
-        获取配置值，支持嵌套配置访问,假如返回的是路径，则会返回绝对路径（父目录+配置中的路径）
+        获取配置值，支持嵌套配置访问
+
+        如果返回的是路径，则会返回绝对路径（父目录+配置中的路径）
 
         Args:
             key: 配置键名，支持点号分隔的嵌套键，如 "database.host" 或 "api.openai.key"
@@ -90,15 +116,27 @@ class Config:
 
         # 如果指定为路径且值为字符串，则转换为绝对路径
         if is_path and isinstance(value, str) and value:
-            # 获取配置文件所在目录作为父目录
-            parent_dir = os.path.dirname(os.path.abspath(self.config_file))
-            # 如果路径不是绝对路径，则拼接父目录
-            if not os.path.isabs(value):
-                value = os.path.join(parent_dir, value)
-            # 标准化路径（处理 .. 和 . 等）
-            value = os.path.normpath(value)
+            value = self._resolve_path(value)
 
         return value
+
+    def _resolve_path(self, path: str) -> str:
+        """
+        解析相对路径为绝对路径
+
+        Args:
+            path: 相对路径
+
+        Returns:
+            绝对路径
+        """
+        # 获取配置文件所在目录作为父目录
+        parent_dir = os.path.dirname(os.path.abspath(self.config_file))
+        # 如果路径不是绝对路径，则拼接父目录
+        if not os.path.isabs(path):
+            path = os.path.join(parent_dir, path)
+        # 标准化路径（处理 .. 和 . 等）
+        return os.path.normpath(path)
 
     def set(self, key: str, value: Any) -> None:
         """

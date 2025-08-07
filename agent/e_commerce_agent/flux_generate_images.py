@@ -4,13 +4,14 @@ from diffusers.utils import load_image
 from PIL import Image
 import os
 from accelerate import Accelerator
+from agent.utils import get_cuda
 
 
-def create_pipe():
+def create_pipe(output_images_num):
     return FluxKontextPipeline.from_pretrained(
         "black-forest-labs/FLUX.1-Kontext-dev",
         torch_dtype=torch.bfloat16,
-    ).to("cuda:1")
+    ).to(f"cuda:{get_cuda(output_images_num*35.0)}")
 
 
 def create_image(
@@ -42,7 +43,7 @@ def create_image(
     # 3. 确保输出目录存在，否则自动创建
     os.makedirs(output_image_dir, exist_ok=True)
     # 4. 加载模型管道（假设 create_pipe() 已定义）
-    pipe = create_pipe()
+    pipe = create_pipe(output_images_num)
     # if hasattr(torch, "compile"):
     #     print("启用 torch.compile() 加速...")
     #     pipe.transformer = torch.compile(pipe.transformer, mode="reduce-overhead")

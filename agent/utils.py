@@ -1,39 +1,62 @@
-import mimetypes
-from moviepy.editor import VideoFileClip
-from agent.third_part.ffmpeg import burn_subtitles_to_video_individuation
-from agent.third_part.minio import MinioClient
-import urllib.parse
+"""
+代理工具模块
+提供网络爬取、文件管理、视频处理、CUDA管理等实用功能
+"""
+
 import os
 import shutil
-import uuid
-from config import conf, logger
-from contextlib import contextmanager
-import random
 import time
+import random
+import threading
+import uuid
+import urllib.parse
+import mimetypes
+from contextlib import contextmanager
+from typing import List, Optional, Tuple, Dict, Any, Union
+
+import torch
 import requests
 from bs4 import BeautifulSoup
-from config import logger
-from agent.third_part.openai_whisper import transcribe_audio_to_words, convert_srt_file, generate_ass_with_default_config
-import threading
+from moviepy.editor import VideoFileClip
+
+from config import conf, logger
+from agent.third_part.ffmpeg import burn_subtitles_to_video_individuation
+from agent.third_part.minio import MinioClient
+from agent.third_part.openai_whisper import (
+    transcribe_audio_to_words,
+    convert_srt_file,
+    generate_ass_with_default_config
+)
+
+# 常量定义
+DEFAULT_TIMEOUT = 10
+DEFAULT_DELAY_MIN = 1
+DEFAULT_DELAY_MAX = 3
+DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 
 
-def crawl_with_requests(url, selector, is_deep=False):
-    """根据url和selector爬取页面内容
+def crawl_with_requests(
+    url: str,
+    selector: str,
+    is_deep: bool = False
+) -> List[str]:
+    """
+    根据url和selector爬取页面内容
 
     Args:
-        url (str): 要爬取的网页URL
-        selector (str): CSS选择器，用于定位要提取的内容
-        is_deep (bool): 是否深度爬取
+        url: 要爬取的网页URL
+        selector: CSS选择器，用于定位要提取的内容
+        is_deep: 是否深度爬取
             - False: 只获取当前selector下的直接文本内容
             - True: 获取当前selector下的所有内容，包括子节点
 
     Returns:
-        list: 匹配选择器的元素内容列表，如果失败返回空列表
+        匹配选择器的元素内容列表，如果失败返回空列表
     """
     try:
         # 设置请求头，模拟浏览器访问
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'User-Agent': DEFAULT_USER_AGENT,
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'Accept-Encoding': 'gzip, deflate, br',
@@ -42,10 +65,10 @@ def crawl_with_requests(url, selector, is_deep=False):
         }
 
         # 添加随机延迟，避免被反爬
-        time.sleep(random.uniform(1, 3))
+        time.sleep(random.uniform(DEFAULT_DELAY_MIN, DEFAULT_DELAY_MAX))
 
         # 发送GET请求
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
         response.raise_for_status()  # 检查HTTP状态码
 
         # 设置编码
@@ -80,15 +103,16 @@ def crawl_with_requests(url, selector, is_deep=False):
         return []
 
 
-def crawl_with_requests_single(url, selector):
-    """根据url和selector爬取页面内容，返回第一个匹配的元素
+def crawl_with_requests_single(url: str, selector: str) -> str:
+    """
+    根据url和selector爬取页面内容，返回第一个匹配的元素
 
     Args:
-        url (str): 要爬取的网页URL
-        selector (str): CSS选择器，用于定位要提取的内容
+        url: 要爬取的网页URL
+        selector: CSS选择器，用于定位要提取的内容
 
     Returns:
-        str: 第一个匹配选择器的元素内容，如果失败返回空字符串
+        第一个匹配选择器的元素内容，如果失败返回空字符串
     """
     results = crawl_with_requests(url, selector)
     return results[0] if results else ""
@@ -96,6 +120,13 @@ def crawl_with_requests_single(url, selector):
 
 @contextmanager
 def create_dir(dir_path: str, name: str):
+    """
+    创建目录的上下文管理器
+
+    Args:
+        dir_path: 父目录路径
+        name: 要创建的目录名
+    """
     create_dir_path = os.path.join(dir_path, name)
     os.makedirs(create_dir_path, exist_ok=True)
     yield create_dir_path
@@ -259,3 +290,95 @@ def get_time_id() -> str:
             now_time_id = str(int(now_time_id) + 1)
         last_time_id = now_time_id
         return now_time_id
+
+
+# 检测CUDA设备数量
+
+def get_cuda(need_free_memory: float):
+    """
+    获取CUDA设备(空闲内存大于等于need_free_memory),否则等待，每过20s检测一次，假如20次检测都没找到就报错
+    Args:
+        need_free_memory: 所需的gpu空间，单位为GB
+    Returns:
+        CUDA设备
+    """
+    # 将GB转换为字节
+    need_free_memory_bytes = need_free_memory * (1024 ** 3)
+
+    # 检测计数器
+    check_count = 0
+    max_checks = 20
+
+    while check_count < max_checks:
+        check_count += 1
+        logger.info(f"第 {check_count}/{max_checks} 次检测CUDA设备...")
+
+        # 获取可用的CUDA设备数量
+        num_devices = torch.cuda.device_count()
+
+        if num_devices == 0:
+            logger.warning("未检测到CUDA设备，等待20秒后重试...")
+            if check_count < max_checks:
+                time.sleep(20)
+            continue
+
+        # 检查每个设备的内存
+        for device_id in range(num_devices):
+            # 获取当前设备的总内存和已分配内存
+            total_memory = torch.cuda.get_device_properties(
+                device_id).total_memory
+            allocated_memory = torch.cuda.memory_allocated(device_id)
+            reserved_memory = torch.cuda.memory_reserved(device_id)
+
+            # 计算空闲内存
+            free_memory = total_memory - (allocated_memory + reserved_memory)
+            free_memory_gb = free_memory / (1024 ** 3)
+
+            logger.info(
+                f"设备 {device_id} - 空闲内存: {free_memory_gb:.2f} GB, 需要: {need_free_memory:.2f} GB")
+
+            # 如果当前设备的空闲内存满足要求，返回该设备
+            if free_memory >= need_free_memory_bytes:
+                logger.info(f"找到满足要求的CUDA设备: {device_id}, 空闲内存: {
+                            free_memory_gb:.2f} GB")
+                return device_id
+
+        # 如果没有找到满足要求的设备，等待20秒后重试
+        if check_count < max_checks:
+            logger.info(f"未找到满足要求的CUDA设备（需要 {
+                        need_free_memory:.2f} GB），等待20秒后重试...")
+            time.sleep(20)
+
+    # 如果20次检测都没找到，抛出异常
+    error_msg = f"经过 {max_checks} 次检测（每次间隔20秒），仍未找到满足要求的CUDA设备（需要 {
+        need_free_memory:.2f} GB）"
+    logger.error(error_msg)
+    raise RuntimeError(error_msg)
+
+
+def get_cuda_return_max_free_memory():
+    # 获取可用的CUDA设备数量
+    num_devices = torch.cuda.device_count()
+
+    if num_devices == 0:
+        return None
+
+    max_free_memory = 0
+    best_device = -1
+
+    for i in range(num_devices):
+        # 获取当前设备的总内存和空闲内存
+        total_memory = torch.cuda.get_device_properties(i).total_memory
+        allocated_memory = torch.cuda.memory_allocated(i)
+        reserved_memory = torch.cuda.memory_reserved(i)
+
+        free_memory = total_memory - (allocated_memory + reserved_memory)
+
+        logger.info(f"设备 {i} - 空闲内存: {free_memory / (1024 ** 2):.2f} MB")
+
+        # 判断是否为最大空闲内存
+        if free_memory > max_free_memory:
+            max_free_memory = free_memory
+            best_device = i
+
+    return best_device

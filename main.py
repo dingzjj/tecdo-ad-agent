@@ -1,3 +1,4 @@
+from modules.hook_e_commerce_agent import bgi_product_gallery_add_btn_click, bgi_product_gallery_remove_btn_click
 from modules.hook_game_ad import get_game_ad_video_mid_state, step1_submit, step2_submit, step3_submit, update_game_ad_video_mid_state
 import os
 from config import conf
@@ -13,11 +14,11 @@ from modules.hook import m2v_v2_add_image_btn_click, m2v_v2_remove_image_btn_cli
 from agent.utils import get_time_id
 image_container_init_number = 0
 
-
 # v1表示文生图生成的图片
 # v2表示视频(without 游戏视频)
 # v3表示视频(with 游戏视频)
 # 所有文件都存在user_id目录下
+
 
 def create_m2v_v2_image_container(group_num: int):
     """创建支持动态添加和删除的图片组件"""
@@ -201,7 +202,7 @@ def create_v1_image_container(group_num: int):
     return container_img
 
 
-with gr.Blocks() as demo:
+with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
     is_end = gr.State(True)
     m2v_v1_group_number = gr.State(3)
     m2v_v1_group_img_container_number = gr.State(5)
@@ -366,9 +367,10 @@ with gr.Blocks() as demo:
             with gr.Column(scale=1):
                 gr.Markdown("## 🎥 确定游戏画面位置")
                 img_of_video_v2_annotated = gr.AnnotatedImage(
-                    label="",
+                    show_label=False,
+                    value=None,
                     height=200,
-                    elem_classes=["image-show-box"]
+                    elem_classes=["annotated-image-show-box"]
                 )
                 x_slider = gr.Slider(
                     label="x",
@@ -403,45 +405,181 @@ with gr.Blocks() as demo:
                         interactive=False,
                         elem_classes=["video-show-box"]
                     )
-    with gr.Tab("批量改图"):
+    with gr.Tab("批量生成图片"):
+        # batch_generate_images bgi
         with gr.Row():
             with gr.Column(scale=1):
-                gr.Markdown("## 输入商品参考图")
-                img_input = gr.Image(
-                    label="图片",
-                    height=200,
-                    sources=["upload"],
-                    interactive=True,
-                    elem_classes=["image-show-box"]
-                )
-                gr.Textbox(
+                gr.Markdown("## 输入商品参考图（越多越好）")
+                with gr.Row():
+                    with gr.Column(scale=1, min_width=200, elem_classes=["bgi_product_image_box"]):
+                        bgi_product_gallery_zm = gr.Gallery(
+                            label="商品正面",
+                            height=200,
+                            file_types=["image"],
+                            format="png",
+                            interactive=False,
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_image_input_zm = gr.Image(
+                            label="商品正面",
+                            height=200,
+                            interactive=True,
+                            sources=["upload"],
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_gallery_zm_add_btn = gr.Button(
+                            "添加商品正面图片", min_width=200)
+                        bgi_product_gallery_zm_remove_btn = gr.Button(
+                            "清空", min_width=200)
+
+                    bgi_product_gallery_zm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
+                        bgi_product_gallery_zm, bgi_product_image_input_zm], outputs=[bgi_product_gallery_zm, bgi_product_image_input_zm])
+                    bgi_product_gallery_zm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
+                        bgi_product_gallery_zm, bgi_product_image_input_zm], outputs=[bgi_product_gallery_zm, bgi_product_image_input_zm])
+                    with gr.Column(scale=1, min_width=200, elem_classes=["bgi_product_image_box"]):
+                        bgi_product_gallery_bm = gr.Gallery(
+                            label="商品背面",
+                            height=200,
+                            file_types=["image"],
+                            format="png",
+                            interactive=False,
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_image_input_bm = gr.Image(
+                            label="商品背面",
+                            height=200,
+                            interactive=True,
+                            sources=["upload"],
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_gallery_bm_add_btn = gr.Button("添加商品背面图片")
+                        bgi_product_gallery_bm_remove_btn = gr.Button(
+                            "清空", min_width=200)
+                    bgi_product_gallery_bm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
+                        bgi_product_gallery_bm, bgi_product_image_input_bm], outputs=[bgi_product_gallery_bm, bgi_product_image_input_bm])
+                    bgi_product_gallery_bm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
+                        bgi_product_gallery_bm, bgi_product_image_input_bm], outputs=[bgi_product_gallery_bm, bgi_product_image_input_bm])
+                    with gr.Column(scale=1, min_width=200, elem_classes=["bgi_product_image_box"]):
+                        bgi_product_gallery_sm = gr.Gallery(
+                            label="商品上面",
+                            height=200,
+                            file_types=["image"],
+                            format="png",
+                            interactive=False,
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_image_input_sm = gr.Image(
+                            label="商品上面",
+                            height=200,
+                            interactive=True,
+                            sources=["upload"],
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_gallery_sm_add_btn = gr.Button("添加商品上面图片")
+                        bgi_product_gallery_sm_remove_btn = gr.Button(
+                            "清空", min_width=200)
+                    bgi_product_gallery_sm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
+                        bgi_product_gallery_sm, bgi_product_image_input_sm], outputs=[bgi_product_gallery_sm, bgi_product_image_input_sm])
+                    bgi_product_gallery_sm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
+                        bgi_product_gallery_sm, bgi_product_image_input_sm], outputs=[bgi_product_gallery_sm, bgi_product_image_input_sm])
+                    with gr.Column(scale=1, min_width=200, elem_classes=["bgi_product_image_box"]):
+                        bgi_product_gallery_xm = gr.Gallery(
+                            label="商品下面",
+                            height=200,
+                            file_types=["image"],
+                            format="png",
+                            interactive=False,
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_image_input_xm = gr.Image(
+                            label="商品下面",
+                            height=200,
+                            interactive=True,
+                            sources=["upload"],
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_gallery_xm_add_btn = gr.Button("添加商品下面图片")
+                        bgi_product_gallery_xm_remove_btn = gr.Button(
+                            "清空", min_width=200)
+                    bgi_product_gallery_xm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
+                        bgi_product_gallery_xm, bgi_product_image_input_xm], outputs=[bgi_product_gallery_xm, bgi_product_image_input_xm])
+                    bgi_product_gallery_xm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
+                        bgi_product_gallery_xm, bgi_product_image_input_xm], outputs=[bgi_product_gallery_xm, bgi_product_image_input_xm])
+                    with gr.Column(scale=1, min_width=200, elem_classes=["bgi_product_image_box"]):
+                        bgi_product_gallery_lm = gr.Gallery(
+                            label="商品左面",
+                            height=200,
+                            file_types=["image"],
+                            format="png",
+                            interactive=False,
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_image_input_lm = gr.Image(
+                            label="商品左面",
+                            height=200,
+                            interactive=True,
+                            sources=["upload"],
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_gallery_lm_add_btn = gr.Button("添加商品左面图片")
+                        bgi_product_gallery_lm_remove_btn = gr.Button(
+                            "清空", min_width=200)
+                    bgi_product_gallery_lm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
+                        bgi_product_gallery_lm, bgi_product_image_input_lm], outputs=[bgi_product_gallery_lm, bgi_product_image_input_lm])
+                    bgi_product_gallery_lm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
+                        bgi_product_gallery_lm, bgi_product_image_input_lm], outputs=[bgi_product_gallery_lm, bgi_product_image_input_lm])
+                    with gr.Column(scale=1, min_width=200, elem_classes=["bgi_product_image_box"]):
+                        bgi_product_gallery_rm = gr.Gallery(
+                            label="商品右面",
+                            height=200,
+                            file_types=["image"],
+                            format="png",
+                            interactive=False,
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_image_input_rm = gr.Image(
+                            label="商品右面",
+                            height=200,
+                            interactive=True,
+                            sources=["upload"],
+                            elem_classes=["image-show-box"]
+                        )
+                        bgi_product_gallery_rm_add_btn = gr.Button("添加商品右面图片")
+                        bgi_product_gallery_rm_remove_btn = gr.Button(
+                            "清空", min_width=200)
+                    bgi_product_gallery_rm_add_btn.click(fn=bgi_product_gallery_add_btn_click, inputs=[
+                        bgi_product_gallery_rm, bgi_product_image_input_rm], outputs=[bgi_product_gallery_rm, bgi_product_image_input_rm])
+                    bgi_product_gallery_rm_remove_btn.click(fn=bgi_product_gallery_remove_btn_click, inputs=[
+                        bgi_product_gallery_rm, bgi_product_image_input_rm], outputs=[bgi_product_gallery_rm, bgi_product_image_input_rm])
+                bgi_product_topic_input = gr.Textbox(
                     label="输入商品主题",
                     placeholder="如：华为nova14手机",
                     elem_classes=["game-description-input"],
                     interactive=True
                 )
-                gr.CheckboxGroup(
+                bgi_modification_scope_select = gr.CheckboxGroup(
                     label="请选择改动范围",
-                    choices=["产品视角", "商品背景"],
+                    choices=["产品视角", "商品背景", "深度生成产品多视角"],
                     value=[],
                     interactive=True
                 )
-                gr.Textbox(
+                bgi_custom_requirements_input = gr.Textbox(
                     label="自定义需求，可不填，用/隔开",
                     placeholder="如：on the water/45 degree/warm color",
                     interactive=True
                 )
-                gr.Slider(
+                bgi_output_images_num_input = gr.Slider(
                     label="请输入生成条数",
                     minimum=1,
                     maximum=100,
+                    interactive=True,
                     step=1,
                     value=1
                 )
-                gr.Button("提交任务")
+                bgi_submit_btn = gr.Button("提交任务")
 
         with gr.Row():
-            gr.Gallery(
+            bgi_result_gallery = gr.Gallery(
                 label="生成结果",
                 file_types=["image"],
                 type="filepath",
@@ -449,41 +587,42 @@ with gr.Blocks() as demo:
                 interactive=False
             )
 
-        # with gr.Tab("ad agent"):
-        #     with gr.Row():
-        #         with gr.Column(scale=1):
-        #             gr.Markdown("## 会话管理")
+    with gr.Tab("ad agent"):
+        with gr.Row():
+            # with gr.Column(scale=1):
+            #     gr.Markdown("## 会话管理")
+            with gr.Column(scale=2):
+                gr.Markdown("## 聊天区域")
+                chatbot = gr.Chatbot(
+                    label="聊天记录",
+                    value=[],
+                    type="messages",
+                    height=700,
+                    elem_classes=["chatbot-container"],
+                    show_label=False
+                )
 
-        #         with gr.Column(scale=2):
-        #             gr.Markdown("## 聊天区域")
-        #             chatbot = gr.Chatbot(
-        #                 label="聊天记录",
-        #                 value=[],
-        #                 type="messages",
-        #                 elem_classes=["chatbot-container"]
-        #             )
+                ad_agent_user_input = gr.MultimodalTextbox(
+                    label="",
+                    placeholder="请输入内容...",
+                    file_count="multiple",
+                    elem_id="ad_agent_user_input",
+                    elem_classes=["user-input"],
+                )
+                # with gr.Column(scale=2):
+                #     gr.Markdown("## 文件管理")
+                #     with gr.Group(elem_id="file_explorer_group"):
+                #         ad_agent_file_explorer = gr.FileExplorer(label="文件管理", root_dir=f"{os.path.join(
+                #             conf.get_path("user_data_dir"), user_id)}", file_count="single", ignore_glob="*.json")
 
-        #             ad_agent_user_input = gr.MultimodalTextbox(
-        #                 label="",
-        #                 placeholder="请输入内容...",
-        #                 file_count="multiple",
-        #                 elem_id="ad_agent_user_input",
-        #                 elem_classes=["user-input"]
-        #             )
-        #         with gr.Column(scale=2):
-        #             gr.Markdown("## 文件管理")
-        #             with gr.Group(elem_id="file_explorer_group"):
-        #                 ad_agent_file_explorer = gr.FileExplorer(label="文件管理", root_dir=f"{os.path.join(
-        #                     conf.get_path("user_data_dir"), user_id)}", file_count="single", ignore_glob="*.json")
-
-        #                 with gr.Group():
-        #                     with gr.Row():
-        #                         with gr.Column():
-        #                             video_display = gr.Video(
-        #                                 label="视频展示", value=None, sources=["upload"])
-        #                         with gr.Column():
-        #                             image_display = gr.Image(
-        #                                 label="图片展示", value=None, sources=["upload"])
+                #         with gr.Group():
+                #             with gr.Row():
+                #                 with gr.Column():
+                #                     video_display = gr.Video(
+                #                         label="视频展示", value=None, sources=["upload"])
+                #                 with gr.Column():
+                #                     image_display = gr.Image(
+                #                         label="图片展示", value=None, sources=["upload"])
 
     m2v_v1_clear_btn_output = list(m2v_v1_group1_container_img)
     m2v_v1_clear_btn_output.extend(m2v_v1_group2_container_img)
@@ -499,13 +638,12 @@ with gr.Blocks() as demo:
         fn=m2v_v1_generate, inputs=(m2v_v1_generate_input),
         outputs=[m2v_v1_video1, m2v_v1_video2, m2v_v1_video3])
 
-    # ad_agent_user_input.submit(fn=user_input_func, inputs=[ad_agent_user_input, chatbot], outputs=[chatbot]).then(
-    #     fn=send_message_to_ad_agent, inputs=[ad_agent_user_input, chatbot, is_end], outputs=[chatbot, is_end])
-    # demo.load(fn=load_app, inputs=[], outputs=[chatbot])
+    ad_agent_user_input.submit(fn=user_input_func, inputs=[ad_agent_user_input, chatbot], outputs=[chatbot]).then(
+        fn=send_message_to_ad_agent, inputs=[ad_agent_user_input, chatbot, is_end], outputs=[ad_agent_user_input, chatbot, is_end])
     # ad_agent_file_explorer.change(
     #     fn=change_file, inputs=[ad_agent_file_explorer], outputs=[video_display, image_display])
 
-    demo.load(fn=load_app, inputs=[user_id], outputs=[user_id])
+    demo.load(fn=load_app, inputs=[user_id], outputs=[user_id, chatbot])
 
     step1_submit_btn.click(fn=step1_submit, inputs=[user_id,
                                                     game_video_input, game_cover_input, game_description_input],

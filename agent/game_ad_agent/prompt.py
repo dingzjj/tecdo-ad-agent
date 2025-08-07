@@ -298,6 +298,18 @@ descrption: {description}
 orientation: {orientation}
 """
 
+ANALYSE_IMAGE_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "prompt": {
+            "type": "STRING",
+            "description": "提示词"
+        }
+    }, "required": [
+        "prompt"
+    ]
+}
+
 ANALYSE_VIDEO_RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {

@@ -1,3 +1,4 @@
+from agent.utils import logger
 import requests
 import uuid
 import json
@@ -10,7 +11,6 @@ import os
 def get_workflow(filename):
     """加载工作流"""
     if os.path.exists(filename):
-        print(f"🔍 Loading prompt: {filename}")
         with open(filename, "r") as f:
             prompt = json.load(f)
         return prompt
@@ -37,13 +37,11 @@ def modify_workflow(workflow, new_text):
         and "text" in workflow["61"]["inputs"]
     ):
         workflow["61"]["inputs"]["text"] = new_text
-        print(f"✅ 已将61号节点的text内容修改为: {new_text}")
-
     return workflow
 
 
 def post_job(server_address, client_id, prompt):
-    print("📤 提交任务中...")
+    logger.info("📤 提交任务中...")
     resp = requests.post(
         f"http://{server_address}/prompt",
         headers={"Content-Type": "application/json"},
@@ -51,12 +49,11 @@ def post_job(server_address, client_id, prompt):
     )
     resp.raise_for_status()
     prompt_id = resp.json()["prompt_id"]
-    print(f"✅ 提交成功，prompt_id: {prompt_id}")
     return prompt_id
 
 
 def get_images(server_address, prompt_id):
-    print("⏳ 等待执行完成...")
+    logger.info("⏳ 等待执行完成...")
     while True:
         history_resp = requests.get(
             f"http://{server_address}/history/{prompt_id}")
@@ -67,7 +64,4 @@ def get_images(server_address, prompt_id):
 
     # print(json.dumps(history_data, indent=2))
     outputs = history_data[prompt_id]["outputs"]
-    for node_id, node_output in outputs.items():
-        print(f"\n🔍 Node {node_id}:")
-        print(json.dumps(node_output, indent=2))
     return outputs
