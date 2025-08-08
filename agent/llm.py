@@ -27,11 +27,11 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, Base
 def create_azure_llm() -> AzureChatOpenAI:
     # 配置 Azure OpenAI 客户端
     return AzureChatOpenAI(
-        api_key="0c7cf81130b7479f9391b327b2a1717f",  # API 密钥
-        azure_endpoint="https://tecdoai-sweden-02.openai.azure.com",  # 替换为你的端点
-        model="gpt-4o-mini",  # 选择模型
-        deployment_name="tecdoai-sweden-02-gpt4o-mini",  # 替换为你的部署名称
-        api_version="2024-08-01-preview",  # API 版本
+        api_key=conf.get("Azure_gpt.api_key"),  # API 密钥
+        azure_endpoint=conf.get("Azure_gpt.azure_endpoint"),  # 替换为你的端点
+        model=conf.get("Azure_gpt.model_name"),  # 选择模型
+        deployment_name=conf.get("Azure_gpt.deployment_name"),  # 替换为你的部署名称
+        api_version=conf.get("Azure_gpt.api_version"),  # API 版本
     )
 
 
