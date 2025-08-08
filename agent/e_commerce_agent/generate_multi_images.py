@@ -1,5 +1,6 @@
 
 # 从左往右看，从下往上看
+from agent.e_commerce_agent.call_for_MVAdapter import call_for_MVAdapter
 from pypinyin import pinyin, Style
 from agent.e_commerce_agent.flux_generate_images import create_image
 from agent.third_part.i2v import Keling
@@ -59,7 +60,23 @@ async def generate_multi_images_v1(image_path, product_topic, modification_scope
 
 async def generate_multi_views_images_v2(image_path_list, product_topic, custom_requirements="", output_images_num=20):
     # image_path_list是list，每个元素是图片路径
+
+    # 直接使用 MVAdapter来生成多视角图片
+    for image_path in image_path_list:
+        positive_prompt = f"A {product_topic} in a {custom_requirements} style"
+        negative_prompt = "watermark, ugly, deformed, noisy, blurry, low contrast"
+        output_dir = os.path.join(
+            conf.get_path("temp_dir"), "product", f"{get_time_id()}")
+        call_for_MVAdapter(positive_prompt, negative_prompt,
+                           image_path, output_dir)
+        # 将output_dir下的图片路径返回
+
+
+async def generate_multi_views_images_v3(image_path_list, product_topic, custom_requirements="", output_images_num=20):
+    # image_path_list是list，每个元素是图片路径
     # product_topic变成拼音
     product_topic_pinyin = pinyin(product_topic, style=Style.NORMAL)
 
     # 1.将图片保存到dataset下
+    # 2.调用MVAdapter来生成多视角图片
+    # 3.返回图片路径

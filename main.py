@@ -560,7 +560,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                 )
                 bgi_modification_scope_select = gr.CheckboxGroup(
                     label="请选择改动范围",
-                    choices=["产品视角", "商品背景", "深度生成产品多视角"],
+                    choices=["产品视角", "商品背景", "深度生成产品多视角v1.0"],
                     value=[],
                     interactive=True
                 )

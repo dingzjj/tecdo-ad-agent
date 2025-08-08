@@ -3,6 +3,9 @@
 提供网络爬取、文件管理、视频处理、CUDA管理等实用功能
 """
 
+from pathlib import Path
+import re
+import glob
 import os
 import shutil
 import time
@@ -382,3 +385,102 @@ def get_cuda_return_max_free_memory():
             best_device = i
 
     return best_device
+
+
+def get_next_available_number(folder_path):
+    """
+    获取文件夹中已存在的img_*文件的最大编号，返回下一个可用编号
+
+    Args:
+        folder_path (str): 文件夹路径
+
+    Returns:
+        int: 下一个可用的编号
+    """
+    max_number = 0
+
+    # 查找所有img_*格式的文件
+    pattern = os.path.join(folder_path, "img_*")
+    existing_files = glob.glob(pattern)
+
+    for file_path in existing_files:
+        filename = os.path.basename(file_path)
+        # 使用正则表达式匹配img_数字.扩展名
+        match = re.match(r'img_(\d+)(\..*)?$', filename)
+        if match:
+            number = int(match.group(1))
+            max_number = max(max_number, number)
+
+    return max_number + 1
+
+
+def rename_files_to_img_sequence(folder_path, start_index=None):
+    """
+    将指定文件夹下的文件重命名为 img_{number}.原后缀 的格式
+    自动从上一次的number开始递增，或者使用自定义的开始索引
+
+    Args:
+        folder_path (str): 文件夹路径
+        start_index (int, optional): 自定义开始索引。如果为None，则自动从上一次的最大编号开始递增
+
+    Returns:
+        int: 重命名的文件数量
+    """
+    # 确保文件夹路径存在
+    if not os.path.exists(folder_path):
+        print(f"错误：文件夹 '{folder_path}' 不存在")
+        return 0
+
+    if not os.path.isdir(folder_path):
+        print(f"错误：'{folder_path}' 不是一个文件夹")
+        return 0
+
+    # 获取下一个可用的编号
+    if start_index is None:
+        # 自动从上一次的最大编号开始递增
+        start_number = get_next_available_number(folder_path)
+        print(f"将从编号 {start_number} 开始重命名文件")
+    else:
+        # 使用自定义开始索引
+        start_number = start_index
+        print(f"将从自定义编号 {start_number} 开始重命名文件")
+
+    # 获取文件夹中的所有文件（不包括子文件夹）
+    files = []
+    for file_path in os.listdir(folder_path):
+        full_path = os.path.join(folder_path, file_path)
+        if os.path.isfile(full_path):
+            # 跳过已经是img_*格式的文件
+            if not re.match(r'img_\d+(\..*)?$', file_path):
+                files.append(file_path)
+
+    # 按文件名排序，确保重命名顺序一致
+    files.sort()
+
+    renamed_count = 0
+
+    for index, filename in enumerate(files):
+        # 获取文件扩展名
+        name, ext = os.path.splitext(filename)
+
+        # 构建新的文件名，使用递增的编号
+        current_number = start_number + index
+        new_filename = f"img_{current_number}{ext}"
+        new_filepath = os.path.join(folder_path, new_filename)
+        old_filepath = os.path.join(folder_path, filename)
+
+        # 如果新文件名已存在，跳过重命名
+        if os.path.exists(new_filepath) and old_filepath != new_filepath:
+            print(f"警告：'{new_filename}' 已存在，跳过重命名 '{filename}'")
+            continue
+
+        try:
+            # 重命名文件
+            os.rename(old_filepath, new_filepath)
+            print(f"重命名：'{filename}' -> '{new_filename}'")
+            renamed_count += 1
+        except OSError as e:
+            print(f"错误：重命名 '{filename}' 失败 - {e}")
+
+    print(f"\n完成！共重命名了 {renamed_count} 个文件")
+    return renamed_count

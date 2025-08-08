@@ -1,0 +1,155 @@
+{
+  "1": {
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0.safetensors",
+      "pipeline_name": "MVAdapterI2MVSDXLPipeline"
+    },
+    "class_type": "LdmPipelineLoader",
+    "_meta": {
+      "title": "LDM Pipeline Loader"
+    }
+  },
+  "2": {
+    "inputs": {
+      "scheduler_name": "DDPM",
+      "shift_snr": true,
+      "shift_mode": "interpolated",
+      "shift_scale": 8,
+      "pipeline": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "DiffusersMVSchedulerLoader",
+    "_meta": {
+      "title": "Diffusers MV Scheduler Loader"
+    }
+  },
+  "3": {
+    "inputs": {
+      "vae_name": "sdxl_vae.safetensors",
+      "upcast_fp32": true
+    },
+    "class_type": "LdmVaeLoader",
+    "_meta": {
+      "title": "LDM Vae Loader"
+    }
+  },
+  "4": {
+    "inputs": {
+      "load_mvadapter": true,
+      "adapter_path": "huanngzh/mv-adapter",
+      "adapter_name": "mvadapter_i2mv_sdxl.safetensors",
+      "num_views": 6,
+      "enable_vae_slicing": true,
+      "enable_vae_tiling": false,
+      "pipeline": [
+        "1",
+        0
+      ],
+      "scheduler": [
+        "2",
+        0
+      ],
+      "autoencoder": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "DiffusersMVModelMakeup",
+    "_meta": {
+      "title": "Diffusers MV Model Makeup"
+    }
+  },
+  "6": {
+    "inputs": {
+      "num_views": 6,
+      "prompt": "A decorative figurine of a young anime-style girl",
+      "negative_prompt": "watermark, ugly, deformed, noisy, blurry, low contrast",
+      "width": 768,
+      "height": 768,
+      "steps": 50,
+      "cfg": 3,
+      "seed": 21,
+      "controlnet_conditioning_scale": 1,
+      "speak_and_recognation": {
+        "__value__": [
+          false,
+          true
+        ]
+      },
+      "pipeline": [
+        "4",
+        0
+      ],
+      "reference_image": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "DiffusersMVSampler",
+    "_meta": {
+      "title": "Diffusers MV Sampler"
+    }
+  },
+  "7": {
+    "inputs": {
+      "image": "2.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "8": {
+    "inputs": {
+      "height": 768,
+      "width": 768,
+      "remove_bg_fn": [
+        "9",
+        0
+      ],
+      "image": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "ImagePreprocessor",
+    "_meta": {
+      "title": "Image Preprocessor"
+    }
+  },
+  "9": {
+    "inputs": {
+      "ckpt_name": "ZhengPeng7/BiRefNet"
+    },
+    "class_type": "BiRefNet",
+    "_meta": {
+      "title": "BiRefNet"
+    }
+  },
+  "10": {
+    "inputs": {
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  },
+  "11": {
+    "inputs": {
+      "images": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  }
+}

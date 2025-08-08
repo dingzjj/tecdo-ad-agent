@@ -252,3 +252,14 @@ def get_gpt_response_with_web_search():
     )
 
     return response
+
+
+def get_gpt5_response(query: str):
+    client = OpenAI(api_key=conf.get("gpt5.api_key"),
+                    base_url=conf.get("gpt5.base_url"))
+
+    response = client.responses.create(
+        model=conf.get("gpt5.model_name"),
+        input=query
+    )
+    return response
