@@ -48,7 +48,7 @@ def bgi_submit(bgi_product_gallery_zm, bgi_product_gallery_bm, bgi_product_galle
     for image_path in all_image_path:
         # 下面的生成不断消耗总数，进行随机生成
         now_results = asyncio.run(generate_multi_images_v1(
-            image_path, bgi_product_topic_input, bgi_modification_scope_select, bgi_custom_requirements_input, one_output_images_num))
+            image_path, bgi_product_topic_input, ','.join(bgi_modification_scope_select), bgi_custom_requirements_input, one_output_images_num))
         for result in now_results:
             results.append((result["image_path"], result["prompt"]))
     return results

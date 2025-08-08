@@ -18,7 +18,6 @@ SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"}
 def get_workflow(filename):
     """加载工作流"""
     if os.path.exists(filename):
-        print(f"🔍 Loading prompt: {filename}")
         with open(filename, "r") as f:
             prompt = json.load(f)
         return prompt
@@ -45,13 +44,11 @@ def modify_workflow(workflow, new_image_path):
         and "image" in workflow["2"]["inputs"]
     ):
         workflow["2"]["inputs"]["image"] = new_image_path
-        print(f"✅ 已将2号节点的image内容修改为: {new_image_path}")
 
     return workflow
 
 
 def post_job(server_address, client_id, prompt):
-    print("📤 提交任务中...")
     try:
         resp = requests.post(
             f"http://{server_address}/prompt",
@@ -60,7 +57,6 @@ def post_job(server_address, client_id, prompt):
         )
         resp.raise_for_status()
         prompt_id = resp.json()["prompt_id"]
-        print(f"✅ 提交成功，prompt_id: {prompt_id}")
         return prompt_id
     except RequestException as e:
         raise RuntimeError(f"❌ 提交失败: {e}")
@@ -71,7 +67,6 @@ def post_job(server_address, client_id, prompt):
 
 
 def get_images(server_address, prompt_id):
-    print("⏳ 等待执行完成...")
     try:
         while True:
             history_resp = requests.get(
@@ -82,34 +77,19 @@ def get_images(server_address, prompt_id):
                     break
                 time.sleep(1)
 
-        # print(json.dumps(history_data, indent=2))
         outputs = history_data[prompt_id]["outputs"]
         return outputs
     except RequestException as e:
         raise RuntimeError(f"❌ 获取失败: {e}")
 
 
-def get_unique_filename(base_dir, base_name, ext):
-    """
-    生成一个不重复的文件名，例如：output_node6_0.jpg、output_node6_1.jpg...
-    """
-    idx = 0
-    while True:
-        filename = f"{base_name}_{idx}{ext}"
-        full_path = os.path.join(base_dir, filename)
-        if not os.path.exists(full_path):
-            return full_path
-        idx += 1
-
-
-def save_node6_images(server_address, outputs):
+def save_node6_images(
+    server_address, outputs, basename="output_node6", output_dir="./images"
+):
     """
     下载6号节点的图片，不覆盖已有文件，自动命名。
     """
-    base_dir = "./images"
-    os.makedirs(base_dir, exist_ok=True)
-    print("🔻 开始下载6号节点的图片...")
-
+    os.makedirs(output_dir, exist_ok=True)
     if "6" in outputs:
         node_output = outputs["6"]
         images = node_output.get("images", [])
@@ -123,8 +103,8 @@ def save_node6_images(server_address, outputs):
             try:
                 image_resp = requests.get(view_url, params=params)
                 if image_resp.status_code != 200:
-                    print(f"⚠️ 图片请求失败: 状态码 {image_resp.status_code}")
-                    print(image_resp.text[:200])
+                    logger.error(f"⚠️ 图片请求失败: 状态码 {image_resp.status_code}")
+                    logger.error(image_resp.text[:200])
                     continue
 
                 image = Image.open(io.BytesIO(image_resp.content))
@@ -139,24 +119,26 @@ def save_node6_images(server_address, outputs):
                     image = image.convert("RGB")
 
                 # 自动生成唯一文件名
-                output_path = get_unique_filename(
-                    base_dir, "output_node6", ext)
+                # 使用 base_name + idx 命名，避免覆盖
+                output_path = os.path.join(
+                    output_dir, f"{basename}{ext}"
+                )
                 image.save(output_path)
-                print(f"💾 已保存图片: {output_path}")
             except Exception as e:
-                print(f"❌ 图片解码失败: {params}")
-                print("返回内容前200字符:", image_resp.content[:200])
-                print(e)
+                logger.error(f"❌ 图片解码失败: {params}")
+                logger.error("返回内容前200字符:", image_resp.content[:200])
+                logger.error(e)
     else:
-        print("⚠️ 未找到6号节点的输出")
+        logger.error("⚠️ 未找到6号节点的输出")
 
 
-def process_image_dir(input_dir, workflow_file, server_address, client_id):
+def process_image_dir(input_dir, output_dir, workflow_file, server_address, client_id):
     """
     批量处理输入目录中的所有图像
 
     参数:
         input_dir: 输入图片目录（绝对路径）
+        output_dir: 输出图片目录
         workflow_file: 工作流 JSON 路径
         server_address: ComfyUI 地址
         client_id: UUID 客户端ID
@@ -178,8 +160,12 @@ def process_image_dir(input_dir, workflow_file, server_address, client_id):
             logger.info(f"⏭️ 跳过非图像文件: {fname}")
             continue
 
+        base_name = os.path.splitext(fname)[0]  # 获取不带扩展名的文件名
+
         try:
             rel_path = f"{input_dir}/{fname}"
+
+            logger.info(f"\n🔄 处理图像: {fname}")
 
             # 每次都复制一份工作流（避免引用污染）
             workflow = json.loads(json.dumps(workflow_template))
@@ -194,24 +180,10 @@ def process_image_dir(input_dir, workflow_file, server_address, client_id):
             outputs = get_images(server_address, prompt_id)
 
             # 保存结果
-            save_node6_images(server_address, outputs)
+            save_node6_images(
+                server_address, outputs, output_dir=output_dir, basename=base_name
+            )
 
         except Exception as e:
-            print(f"❌ 处理 {fname} 时出错: {e}")
+            logger.error(f"❌ 处理 {fname} 时出错: {e}")
             continue
-
-
-if __name__ == "__main__":
-    # 配置服务器信息
-    server_address = "127.0.0.1:6009"
-    client_id = str(uuid.uuid4())  # generate client_id
-
-    # 加载工作流
-    workflow_file = conf.get_path("remove_bg_workflow_json_path")
-
-    """如果需要对其他节点的信息进行修改，
-    可以先研究工作流 JSON 文件中的节点信息（或者打开 ComfyUI 查看每个节点中的属性值设置），
-    再根据 modify_workflow 内容来模仿修改"""
-    # 图片要用绝对路径
-    input_dir = "/data/dzj/dataset/product1/images768_768"
-    process_image_dir(input_dir, workflow_file, server_address, client_id)

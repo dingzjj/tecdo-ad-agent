@@ -1,5 +1,6 @@
 
 # 从左往右看，从下往上看
+from pypinyin import pinyin, Style
 from agent.e_commerce_agent.flux_generate_images import create_image
 from agent.third_part.i2v import Keling
 import asyncio
@@ -54,3 +55,11 @@ async def generate_multi_images_v1(image_path, product_topic, modification_scope
         for image_path in images_list:
             results.append({"prompt": prompt, "image_path": image_path})
     return results
+
+
+async def generate_multi_views_images_v2(image_path_list, product_topic, custom_requirements="", output_images_num=20):
+    # image_path_list是list，每个元素是图片路径
+    # product_topic变成拼音
+    product_topic_pinyin = pinyin(product_topic, style=Style.NORMAL)
+
+    # 1.将图片保存到dataset下

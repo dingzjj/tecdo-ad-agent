@@ -1,3 +1,5 @@
+import google.cloud.aiplatform_v1.types
+from config import conf
 from typing import Callable, List, Optional
 import os
 import matplotlib.pyplot as plt
@@ -130,7 +132,7 @@ def translate_with_gemini_in_vertexai(context: str) -> str:
 def generate_embedding_with_openai(text: str) -> list[float]:
     query_vectors = [
         vec.embedding
-        for vec in OpenAI(api_key=conf.get('openai_api_key'), base_url=conf.get('openai_api_base')).embeddings.create(input=text, model=config.get('openai_embedding_model')).data]
+        for vec in OpenAI(api_key=conf.get('openai_api_key'), base_url=conf.get('openai_api_base')).embeddings.create(input=text, model=conf.get('openai_embedding_model')).data]
     return query_vectors[0]
 
 
@@ -209,3 +211,44 @@ def i2v_with_tongyi(img_url, prompt, resolution, duration, prompt_extend=True):
     else:
         logger.error('Failed, status_code: %s, code: %s, message: %s' %
                      (rsp.status_code, rsp.code, rsp.message))
+
+
+# def get_gemini_response_with_web_search(system_prompt: str, input: str, model: str) -> str:
+#     # 设置GOOGLE_API_KEY为conf.get("gemini_config.private_key")
+#     os.environ["GOOGLE_API_KEY"] = conf.get("gemini_config.private_key")
+#    # Configure the client
+#     #    `vertexai=True,project="your-project-id", location="us-central1"`
+#     credentials = service_account.Credentials.from_service_account_file(
+#         filename=conf.get_file_path('gemini_conf'))
+#     vertexai.init(project='ca-biz-vypngh-y97n', credentials=credentials)
+#     client = genai.Client(vertexai=True, credentials=credentials)
+
+#     # Define the grounding tool
+#     grounding_tool = types.Tool(
+#         google_search=types.GoogleSearch()
+#     )
+
+#     # Configure generation settings
+#     config = types.GenerateContentConfig(
+#         tools=[grounding_tool]
+#     )
+
+#     # Make the request
+#     response = client.models.generate_content(
+#         model=model,
+#         contents=input,
+#         config=config,
+#     )
+#     return response
+
+def get_gpt_response_with_web_search():
+    client = OpenAI(api_key=conf.get("openai_api_key"),
+                    base_url=conf.get("openai_api_base"))
+
+    response = client.responses.create(
+        model="gpt-4o-search-preview",
+        tools=[{"type": "web_search_preview"}],
+        input="我要关于拖鞋的视频的具体链接"
+    )
+
+    return response
