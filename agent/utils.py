@@ -484,3 +484,38 @@ def rename_files_to_img_sequence(folder_path, start_index=None):
 
     print(f"\n完成！共重命名了 {renamed_count} 个文件")
     return renamed_count
+
+
+def clear_empty_dir(dir_paths: list[str]):
+    """
+    清空目录及其子目录下的所有空文件夹（不包含文件的文件夹会被删除）。
+    Args:
+        dir_paths (list[str]): 要检查的目录路径列表。
+    """
+    logger.info(f"清空目录: {dir_paths}")
+    for root_dir in dir_paths:
+        if not os.path.isdir(root_dir):
+            print(f"❌ 跳过：{root_dir} 不是有效目录")
+            continue
+
+        # 多次递归，直到没有空目录可删
+        deleted = True
+        while deleted:
+            deleted = False
+            for current_dir, subdirs, files in os.walk(root_dir, topdown=False):
+                # 空目录：没有文件，且子目录已空
+                if not subdirs and not files:
+                    try:
+                        os.rmdir(current_dir)
+                        print(f"🗑 删除空目录: {current_dir}")
+                        deleted = True
+                    except OSError as e:
+                        print(f"⚠ 删除失败: {current_dir}, {e}")
+
+
+def clear_empty_dir_in_project():
+    user_dir = conf.get_path("user_dir")
+    temp_dir = conf.get_path("temp_dir")
+    result_dir = conf.get_path("result_dir")
+    material_library_dir = conf.get_path("material_library_dir")
+    clear_empty_dir([user_dir, temp_dir, result_dir, material_library_dir])

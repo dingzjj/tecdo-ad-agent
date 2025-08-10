@@ -4,7 +4,7 @@ import cv2
 from config import conf
 # Load a model
 # pretrained YOLO11n model
-model = YOLO(conf.get_path("yolo11m_segment_phone_model_path"))
+model = YOLO(conf.get_path("yolo11m_segment_phone_model_path"), task="segment")
 
 # Run batched inference on a list of images
 # return a list of Results objects

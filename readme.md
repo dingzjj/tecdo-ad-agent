@@ -118,7 +118,7 @@ ad_agent/
 
 ```json
 {
-  "user_data_dir": "user_dir",
+  "user_dir": "user_dir",
   "log_dir": "logs",
   "api_keys": {
     "openai": "your-openai-key",

@@ -34,7 +34,7 @@ def step1_submit(user_id,game_video_input, game_cover,game_description):
         game_cover_orientation = "vertical"
     # 生成image v1
     image_prompt_list = generate_image_prompt(game_video_input,game_description,game_cover_orientation)
-    image_v1_dir = conf.get_path("user_data_dir") + f"/{user_id}/image_v1"
+    image_v1_dir = conf.get_path("user_dir") + f"/{user_id}/image_v1"
     os.makedirs(image_v1_dir, exist_ok=True)
     image_v1_list = []
     all_img_v1_list = {}
@@ -61,7 +61,7 @@ def step2_submit(user_id,img_v1_gallery_select_box,all_img_v1_list):
     """
 
     all_video_v2_list = []
-    output_dir = conf.get_path("user_data_dir") + f"/{user_id}/video_v2"
+    output_dir = conf.get_path("user_dir") + f"/{user_id}/video_v2"
     for img_v1_index in img_v1_gallery_select_box:
         img_v1_index=int(img_v1_index)
         # {"image_prompt":image_prompt,"image_v1_path":image_v1_path}
@@ -117,7 +117,7 @@ def step3_submit(user_id,all_video_v2_list,game_video_input,x,y,width):
         x2 = x1+(y2-y1)*(overlay_width/overlay_height)
     x2 = int(x2)
     y2 = int(y2)
-    final_video_path = conf.get_path("user_data_dir") + f"/{user_id}/final_video.mp4"
+    final_video_path = conf.get_path("user_dir") + f"/{user_id}/final_video.mp4"
     chartlet_video_to_video(main_cap,overlay_cap,(x1,y1,x2,y2),final_video_path)
     return final_video_path
 def get_game_ad_video_mid_state(game_ad_video_mid_output):

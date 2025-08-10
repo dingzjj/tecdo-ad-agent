@@ -51,7 +51,7 @@ def m2v_v2_generate(
     try:
         fragment_id = get_time_id()
         video_output_path = os.path.join(
-            conf.get_path("user_data_dir"),
+            conf.get_path("user_dir"),
             "main",
             fragment_id
         )
@@ -109,7 +109,7 @@ def m2v_v2_video_stitching(
         # 生成拼接视频
         video_id = get_time_id()
         output_path = os.path.join(
-            conf.get_path("user_data_dir"),
+            conf.get_path("user_dir"),
             "main",
             video_id
         )

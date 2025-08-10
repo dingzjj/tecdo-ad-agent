@@ -383,7 +383,7 @@ class M2VAgent:
     #     """
     #     调用m2v_workflow工作流,根据模特图片生成视频片段
     #     """
-    #     video_output_path = conf.get_path("m2v_workflow_result_dir")
+    #     video_output_path = conf.get_path("result_dir")
     #     id = str(uuid.uuid4())
     #     with create_dir(video_output_path, name=id) as temp_dir_path:
     #         app = get_m2v_workflow()
@@ -437,7 +437,7 @@ class M2VAgent:
                     index_list.remove(index)
         if len(need_change_video_fragments) != need_change_number:
             raise HumanError(f"视频片段索引{index_list}不存在")
-        result_dir = conf.get_path("m2v_workflow_result_dir")
+        result_dir = conf.get_path("result_dir")
 
         # 并发执行所有视频片段处理任务
         tasks = [self.process_video_fragment(workflow_state.product, workflow_state.product_info, workflow_state.video_fragment_duration, video_fragment, result_dir, workflow_state.i2v_strategy)

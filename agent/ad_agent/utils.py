@@ -74,12 +74,12 @@ def get_absolute_path_from_user_dir(user_id: str, file_path: str) -> str:
     file_path一般为相对路径
     """
     file_path = os.path.join(conf.get_path(
-        "user_data_dir"), user_id, file_path)
+        "user_dir"), user_id, file_path)
 
     # 先判断分为是否超过
-    if not validate_file_within_directory(conf.get_path("user_data_dir"), file_path):
+    if not validate_file_within_directory(conf.get_path("user_dir"), file_path):
         raise ValueError(f"文件路径 {file_path} 超出了指定文件夹 {
-                         conf.get_path("user_data_dir")} 的范围。")
+                         conf.get_path("user_dir")} 的范围。")
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"文件不存在: {file_path}")
     return file_path

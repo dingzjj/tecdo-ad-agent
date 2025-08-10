@@ -87,8 +87,11 @@ class Classifier:
                         return category["category_name"]
             except Exception as e:
                 logger.error(e)
-
-
+from typing import Literal
+import os
+import requests
+from config import conf
+from agent.utils import get_time_id
 class AnalyseImageAgent:
     """
     分析图片(人+商品)，返回图片信息
@@ -97,17 +100,24 @@ class AnalyseImageAgent:
     def __init__(self, model: str = "gemini-2.5-flash"):
         self.model = model
 
-    def analyse_image(self, product: str, image_path: str) -> str:
+    def analyse_image(self, product: str, image_path: str,source:Literal["web","local"],language:Literal["cn","en"]) -> str:
 
         match self.model:
             case "gemini-2.5-flash":
-                return self.analyse_image_with_gemini_2_5_flash(product, image_path)
+                return self.analyse_image_with_gemini_2_5_flash(product, image_path,source)
             case _:
                 raise ValueError(f"Unsupported model: {self.model}")
 
-    def analyse_image_with_gemini_2_5_flash(self, product: str, image_path: str) -> str:
-        with open(image_path, "rb") as file:
-            image_data = file.read()
+    def analyse_image_with_gemini_2_5_flash(self, product: str, image_path: str,source:Literal["web","local"]) -> str:
+        
+        if source == "web":
+            temp_dir = conf.get_path("temp_dir")
+            local_image_path = os.path.join(temp_dir, get_time_id())
+            response = requests.get(image_path)
+            image_data = response.content
+        elif source == "local":
+            with open(image_path, "rb") as file:
+                image_data = file.read()
 
         # 根据文件后缀获取 MIME 类型
         mime_type, _ = mimetypes.guess_type(image_path)

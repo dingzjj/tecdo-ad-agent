@@ -208,7 +208,7 @@ async def start_generate_video(state: ADAgentState, config):
     开始生成
     """
     # 附加信息中的图片信息必定作为模特图片
-    video_output_path = conf.get_path("m2v_workflow_result_dir")
+    video_output_path = conf.get_path("result_dir")
     # llm从用户输入中提取商品名称、商品信息、模特图片、视频片段时长，没有则使用默认值(字符串),将其放入workflow_state中
     workflow_state = GenerateVideoState(id=get_time_id(
     ), product="", product_info="", model_images=[], video_output_path=video_output_path)
@@ -274,7 +274,7 @@ async def generate_fragment(state: ADAgentState, config):
     根据模特图片，是否提供提示词，视频类型，视频时长，生成视频片段
     """
     # 获取以上信息
-    video_output_path = conf.get_path("m2v_workflow_result_dir")
+    video_output_path = conf.get_path("result_dir")
     model_images = [value for key, value in state.overhead_information.items(
     ) if key.startswith("img_")]
     m2v_agent = M2VAgent()
@@ -343,7 +343,7 @@ async def end_generate_fragment(state: ADAgentState, config):
     """
     结束生成片段
     """
-    video_output_path = conf.get_path("m2v_workflow_result_dir")
+    video_output_path = conf.get_path("result_dir")
     for index, video_fragment in enumerate(state.video_fragment_list):
         fragment_content = f"""片段{index + 1}生成完成,使用的生成策略是keling，视频内容：{video_fragment.action_type}，模特序号为{int(index/2)+1},视频时长为{video_fragment.video_duration}秒,
             使用的正面提示词为({video_fragment.video_positive_prompt}),使用的负面提示词为({video_fragment.video_negative_prompt})\n"""
@@ -378,9 +378,9 @@ async def start_modify(state: ADAgentState, config):
 
 async def m_load_state(state: ADAgentState, config):
     # state.json在temp_dir/id/state.json
-    m2v_workflow_result_dir_path = config["configurable"]["result_dir"]
+    result_dir_path = config["configurable"]["result_dir"]
     m2v_workflow_dir = os.path.join(
-        m2v_workflow_result_dir_path, state.workflow_id)
+        result_dir_path, state.workflow_id)
     state_path = os.path.join(m2v_workflow_dir, "state.json")
     with open(state_path, "r") as f:
         state.workflow_state = GenerateVideoState.model_validate_json(f.read())

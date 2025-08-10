@@ -36,7 +36,7 @@ def segment_video_headless(model_path, input_video_path, output_video_path,
 
         # 加载预训练的 YOLOv8 模型
         print(f"正在加载模型: {model_path}")
-        model = YOLO(model_path)
+        model = YOLO(model_path, task="segment")
         print("模型加载成功!")
 
         # 打开输入视频文件

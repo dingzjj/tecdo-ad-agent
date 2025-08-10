@@ -10,7 +10,7 @@ import gradio as gr
 
 from agent.utils import get_time_id
 from agent.ad_agent.m2v_workflow import ainvoke_m2v_workflow
-from agent.ad_agent.do_workflow import start_hint
+from agent.ad_agent.react_agent import start_hint
 from config import conf
 from pojo import user_id
 
@@ -41,7 +41,7 @@ def load_app(user_id: str) -> Tuple[str, List[gr.ChatMessage]]:
     new_user_id = get_time_id()
 
     # 创建用户数据目录
-    user_data_path = os.path.join(conf.get("user_data_dir"), new_user_id)
+    user_data_path = os.path.join(conf.get("user_dir"), new_user_id)
     os.makedirs(user_data_path, exist_ok=True)
 
     # 初始化聊天历史
@@ -173,7 +173,7 @@ async def m2v_v1_generate(
     # 准备任务列表
     task_list = []
     workflow_ids = [None] * 3
-    video_output_path = os.path.join(conf.get_path("user_data_dir"), user_id)
+    video_output_path = os.path.join(conf.get_path("user_dir"), user_id)
     os.makedirs(video_output_path, exist_ok=True)
 
     # 初始化视频路径

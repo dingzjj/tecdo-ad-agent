@@ -8,7 +8,7 @@ from agent.third_part.i2v import action_types
 from modules.hook import change_file
 from modules.hook import m2v_v1_generate, m2v_v1_clear, m2v_v2_clear
 from modules.hook_m2v import m2v_v2_generate, m2v_v2_video_stitching
-from modules.hook_ad_agent import send_message_to_ad_agent
+from modules.hook_ad_agent import send_message_to_do_workflow, send_message_to_ad_agent
 from modules.hook import user_input_func
 from modules.hook import m2v_v2_add_image_btn_click, m2v_v2_remove_image_btn_click
 from agent.utils import get_time_id
@@ -314,7 +314,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
     with gr.Tab("game ad agent"):
         game_ad_agent_mid_video = gr.State("")
         img_of_video_v2 = gr.State("")
-        user_id = gr.State("test")
+        user_id = gr.State("main")
         all_img_v1_list = gr.State({})
         all_video_v2_list = gr.State([])
         game_video_input_width = gr.State(0)
@@ -587,7 +587,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                 interactive=False
             )
 
-    with gr.Tab("ad agent", visible=False):
+    with gr.Tab("ad agent"):
         with gr.Row():
             # with gr.Column(scale=1):
             #     gr.Markdown("## 会话管理")
@@ -609,20 +609,15 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                     elem_id="ad_agent_user_input",
                     elem_classes=["user-input"],
                 )
-                # with gr.Column(scale=2):
-                #     gr.Markdown("## 文件管理")
-                #     with gr.Group(elem_id="file_explorer_group"):
-                #         ad_agent_file_explorer = gr.FileExplorer(label="文件管理", root_dir=f"{os.path.join(
-                #             conf.get_path("user_data_dir"), user_id)}", file_count="single", ignore_glob="*.json")
-
-                #         with gr.Group():
-                #             with gr.Row():
-                #                 with gr.Column():
-                #                     video_display = gr.Video(
-                #                         label="视频展示", value=None, sources=["upload"])
-                #                 with gr.Column():
-                #                     image_display = gr.Image(
-                #                         label="图片展示", value=None, sources=["upload"])
+            with gr.Column(scale=2):
+                # 素材库
+                gr.Markdown("## 素材库")
+                ad_agent_material_library = gr.Gallery(
+                    label="素材库",
+                    file_types=["image"],
+                    type="filepath",
+                    interactive=False,
+                )
 
     m2v_v1_clear_btn_output = list(m2v_v1_group1_container_img)
     m2v_v1_clear_btn_output.extend(m2v_v1_group2_container_img)
@@ -639,7 +634,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
         outputs=[m2v_v1_video1, m2v_v1_video2, m2v_v1_video3])
 
     ad_agent_user_input.submit(fn=user_input_func, inputs=[ad_agent_user_input, chatbot], outputs=[chatbot]).then(
-        fn=send_message_to_ad_agent, inputs=[ad_agent_user_input, chatbot, is_end], outputs=[ad_agent_user_input, chatbot, is_end])
+        fn=send_message_to_ad_agent, inputs=[user_id, ad_agent_user_input, chatbot], outputs=[ad_agent_user_input, chatbot, ad_agent_material_library])
     # ad_agent_file_explorer.change(
     #     fn=change_file, inputs=[ad_agent_file_explorer], outputs=[video_display, image_display])
 
@@ -666,4 +661,4 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
         bgi_product_gallery_zm, bgi_product_gallery_bm, bgi_product_gallery_sm, bgi_product_gallery_xm, bgi_product_gallery_lm, bgi_product_gallery_rm, bgi_product_topic_input, bgi_modification_scope_select, bgi_custom_requirements_input, bgi_output_images_num_input], outputs=[bgi_result_gallery])
 
 demo.queue(max_size=20, default_concurrency_limit=5)
-demo.launch(server_name="0.0.0.0", server_port=6005, share=False)
+demo.launch(server_name="0.0.0.0", server_port=6012, share=False)
