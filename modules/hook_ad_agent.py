@@ -1,3 +1,4 @@
+from agent.ad_agent.pojo import gradio_chat_message_list2chat_message_list
 from agent.ad_agent.react_agent import AdAgents
 from agent.ad_agent.react_agent import AdAgent
 import asyncio
@@ -107,7 +108,7 @@ def send_message_to_ad_agent(user_id, user_input, chatbot):
         AdAgents[user_id] = AdAgent(user_id)
     chatbot.pop(0)
     chatbot.pop(0)
-    chat_history = gradio_chat_message_list2ad_agent_chat_message_list(chatbot)
+    chat_history = gradio_chat_message_list2chat_message_list(chatbot)
     question = user_input["text"]
     user_files = user_input["files"]
 
@@ -138,5 +139,5 @@ def send_message_to_ad_agent(user_id, user_input, chatbot):
     for file_path in user_files:
         overhead_information[file_path] = file_path
     chatbot.append(gr.ChatMessage(
-        role="assistant", content=result[-1].content))
+        role="assistant", content=result["messages"][-1].content))
     return None, chatbot, AdAgents[user_id].state.material_library.return_material_list()

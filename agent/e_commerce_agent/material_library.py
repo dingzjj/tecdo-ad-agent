@@ -1,4 +1,5 @@
 # 爬取（堆量)
+from translate import Translator
 from config import logger
 from urllib.parse import quote
 import asyncio
@@ -76,12 +77,15 @@ async def crawl_material_in_lazada(keyword: str, start_mid: int) -> list[Materia
     pass
 
 
-async def crawl_material_in_aws(keyword: str, start_mid: int) -> list[Material]:
+async def crawl_material_in_aws(keyword: str, start_mid: int, max_link_num: int = 10) -> list[Material]:
     """
     爬取商品链接
     :param keyword: 商品关键词
     :return: Material
     """
+    # 将keyword翻译为英文
+    keyword = Translator(from_lang="Chinese", to_lang="English").translate(
+        keyword)
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
@@ -92,6 +96,7 @@ async def crawl_material_in_aws(keyword: str, start_mid: int) -> list[Material]:
 
         # print("Step 1: Go to Amazon search page directly")
         url = f"https://www.amazon.com/s?k={quote(keyword)}"
+        logger.info(f"url: {url}")
         await page.goto(url, timeout=30000)
 
         # print("Step 2: Wait for and select sort option")
@@ -114,7 +119,9 @@ async def crawl_material_in_aws(keyword: str, start_mid: int) -> list[Material]:
         # print("Step 5: Process each goods link")
         materials = []
         for i, link in enumerate(goods_links, start=1):
-            logger.info(f"Processing link: {i}/{len(goods_links)}")
+            if i > max_link_num:
+                break
+            logger.info(f"Processing link: {i}/{max_link_num}")
             try:
                 await page.goto(link, timeout=30000)
             except:

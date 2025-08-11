@@ -1,4 +1,5 @@
 # 采用reAct框架 不断的调工具 - 直到得出结果（需要工具输出的src比较完善）
+from click.decorators import pass_meta_key
 from agent.ad_agent.prompt import AD_AGENT_SYSTEM_PROMPT_cn
 from langchain_core.tools.base import ArgsSchema, BaseTool
 from langchain_core.messages import HumanMessage
@@ -72,7 +73,7 @@ class AdAgent:
         """
         调用agent
         :param message: 消息
-        :param overhead_information: 额外信息,用于记录用户输入的模特图片，文档，文件
+        :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
         :return: 响应
         """
 
@@ -102,7 +103,7 @@ def get_material_from_link(self, link: str):
 def upload_material(self, overhead_information: dict = {}):
     """
     上传素材
-    :param overhead_information: 额外信息,用于记录用户输入的模特图片，文档，文件
+    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
     :return: 素材
     """
     for key, value in overhead_information.items():
@@ -133,64 +134,108 @@ def get_material_in_web(user_id: str, keyword: str):
 
 
 @tool
-def create_video_in_material_list(user_id: str, require: str):
-    """
-    根据素材库中的素材创建视频
-    :param require: 需求
-    :return: 视频
-    """
-    if user_id not in AdAgents:
-        raise ValueError(f"用户{user_id}不存在")
-    materials_info = AdAgents[user_id].state.material_library.get_all_material_info(
-    )
-    # 通过Llm来选择素材
-
-
-@tool
-def create_video_by_t2v(self, require: str):
-    """
-    根据text-to-video模型创建视频
-    :param require: 需求
-    :return: 视频
-    """
-    pass
-
-
-@tool
-def create_video_by_i2v(self, require: str):
-    """
-    根据image-to-video模型创建视频
-    :param require: 需求
-    :return: 视频
-    """
-    pass
-
-
-@tool
-def create_image_by_t2i(self, require: str):
-    """
-    根据text-to-image模型创建图片
-    :param require: 需求
-    :return: 图片
-    """
-    pass
-
-
-@tool
-def create_image_by_i2i(self, require: str):
-    """
-    根据image-to-image模型创建图片
-    :param require: 需求
-    :return: 图片
-    """
-    pass
-
-
-@tool
-def pre_review_material(self, require: str):
+def pre_review_material(self, overhead_information: dict = {}):
     """
     预审素材
-    :param require: 需求
+    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
     :return: 素材
+    """
+    pre_review_material_result_list = []
+    for key, value in overhead_information.items():
+        if key.startswith("video_") or key.startswith("img_"):
+            # 对图片进行预审
+            video_path = value
+            text_input = None
+            screenshot = ""
+            result = process_media(
+                media_file=video_path,
+                MEDIASHIELD_GEMINI_API_KEY=conf.get(
+                    "MEDIASHIELD_GEMINI_API_KEY"),
+                MEDIASHIELD_GPT_API_KEY=conf.get("MEDIASHIELD_GPT_API_KEY"),
+                similarity_threshold=0.4,
+                text_input=text_input,
+                screenshot=screenshot
+            )
+            result = result["message"]
+            pre_review_material_result_list.append(result)
+    pre_review_material_content = ""
+    for index, pre_review_material_result in enumerate(pre_review_material_result_list):
+        pre_review_material_content += f"""素材{index + 1}
+            的预审结果为{pre_review_material_result}"""
+    return pre_review_material_content
+
+
+# 用户给定图片or没有给定
+@tool
+def create_video_by_t2v(user_id: str, require: str):
+    """
+    使用text-to-video模型创建视频
+    :param user_id: 用户id
+    :param require: 需求
+    """
+    pass
+
+
+@tool
+def create_video_by_i2v_wo_assign(user_id: str, require: str, overhead_information: dict = {}):
+    """
+    用户没有指定图片或者用户希望根据其输入的图片来生成视频，使用image-to-video模型创建视频
+    :param user_id: 用户id
+    :param require: 需求
+    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
+    """
+    input_image_list = []
+    # 判断其中是否有image_开头
+    for key, value in overhead_information.items():
+        if key.startswith("image_"):
+            # 使用image-to-video模型创建视频
+            input_image_list.append(value)
+    if len(input_image_list) == 0:
+        # 在素材库中选择合适的素材
+        pass
+    else:
+        # 使用以上图片 + 需求 来创建视频
+        pass
+
+
+@tool
+def create_video_by_i2v_with_assign(user_id: str, require: str, overhead_information: dict = {}):
+    """
+    用户指定了图片，使用image-to-video模型创建视频
+    :param user_id: 用户id
+    :param require: 需求
+    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
+    """
+    pass
+
+
+@tool
+def create_image_by_t2i(user_id: str, require: str):
+    """
+    使用text-to-image模型创建图片
+    :param user_id: 用户id
+    :param require: 需求
+    """
+    pass
+
+
+@tool
+def create_image_by_i2i_wo_assign(user_id: str, require: str, overhead_information: dict = {}):
+    """
+    用户没有指定图片或者用户希望根据其输入的图片来生成图片，使用image-to-image模型创建图片
+    :param user_id: 用户id
+    :param require: 需求
+    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
+    """
+    pass
+
+
+@tool
+def create_image_by_i2i_with_assign(user_id: str, require: str, overhead_information: dict = {}):
+    """
+    用户指定了图片，使用image-to-image模型创建图片
+    :param user_id: 用户id
+    :param require: 需求
+    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
     """
     pass

@@ -33,12 +33,32 @@ def gradio_chat_message2ad_agent_chat_message(gradio_chat_message: gr.ChatMessag
         return AdAgentChatMessage(role=gradio_chat_message["role"], type="text", content=str(content), file_path="")
 
 
+def gradio_chat_message2chat_message(gradio_chat_message: gr.ChatMessage):
+    # 目前只转换text类型的消息
+    content = gradio_chat_message["content"]
+    if isinstance(content, str):
+        return None
+    if gradio_chat_message["role"] == "user":
+        return HumanMessage(content=content)
+    else:
+        return AIMessage(content=content)
+
+
 def gradio_chat_message_list2ad_agent_chat_message_list(gradio_chat_message_list: list[gr.ChatMessage]):
     ad_agent_chat_message_list = []
     for gradio_chat_message in gradio_chat_message_list:
         ad_agent_chat_message_list.append(
             gradio_chat_message2ad_agent_chat_message(gradio_chat_message))
     return ad_agent_chat_message_list
+
+
+def gradio_chat_message_list2chat_message_list(gradio_chat_message_list: list[gr.ChatMessage]):
+    chat_message_list = []
+    for gradio_chat_message in gradio_chat_message_list:
+        chat_message = gradio_chat_message2chat_message(gradio_chat_message)
+        if chat_message is not None:
+            chat_message_list.append(chat_message)
+    return chat_message_list
 
 
 def ad_agent_chat_message2chat_message(ad_agent_chat_message_list: list[AdAgentChatMessage]):
