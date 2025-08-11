@@ -104,7 +104,7 @@ class AdAgent:
 @tool
 def get_material_from_link(self, link: str):
     """
-    根据链接获取素材https://blog.csdn.net/Alex_StarSky/article/details/136574438
+    根据链接获取素材
     :param link: 链接
     :return: 素材
     """
@@ -132,7 +132,7 @@ def upload_material(self, overhead_information: dict = {}):
     return "素材上传成功"
 
 
-@tool()
+@tool
 def get_material_in_web(user_id: str, keyword: str):
     """
     根据关键词获取素材
@@ -146,11 +146,10 @@ def get_material_in_web(user_id: str, keyword: str):
 
 
 @tool
-def pre_review_material(self, overhead_information: dict = {}):
+def pre_review_material(overhead_information: dict = {}):
     """
     预审素材
     :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
-    :return: 素材
     """
     pre_review_material_result_list = []
     for key, value in overhead_information.items():
@@ -178,7 +177,7 @@ def pre_review_material(self, overhead_information: dict = {}):
 
 
 # 用户给定图片or没有给定
-
+from agent.utils import choose_model
 @tool
 def create_video_by_t2v(user_id: str, require: str):
     """
@@ -186,7 +185,8 @@ def create_video_by_t2v(user_id: str, require: str):
     :param user_id: 用户id
     :param require: 需求
     """
-    pass
+    model_id = choose_model(require)
+    
 
 
 @tool

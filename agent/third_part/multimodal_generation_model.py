@@ -1,3 +1,7 @@
+from agent.llm import get_gemini_multimodal_model
+from agent.third_part.prompt import CHOOSE_MODEL_SYSTEM_PROMPT, CHOOSE_MODEL_RESPONSE_SCHEMA
+import json
+from translate import Translator
 import os
 from typing import Dict, Any, Optional
 import requests
@@ -13,21 +17,6 @@ import httpx
 from abc import abstractmethod, ABC
 from config import logger
 from agent.exception import CreateVideoError
-
-
-class MultimodalGenerationModel(ABC):
-    def __init__(self, name: str):
-        self.name = name
-
-    @abstractmethod
-    async def i2v(self, img_path, positive_prompt, negative_prompt, duration, resolution):
-        raise NotImplementedError(
-            f"MultimodalGenerationModel {self.name} does not implement i2v")
-
-    @abstractmethod
-    async def t2v(self, positive_prompt, negative_prompt, duration, resolution):
-        raise NotImplementedError(
-            f"MultimodalGenerationModel {self.name} does not implement t2v")
 
 
 class Keling:
@@ -362,3 +351,220 @@ class Veo3:
                 continue
         logger.info(f"🎉 视频生成完成！文件路径: {video_path}")
         return video_path
+
+
+def choose_model(require: str) -> str:
+    """
+    使用 Gemini 多模态模型分析文本内容。
+
+    该函数通过 Vertex AI 调用 Gemini 模型，将提供的文本提示（prompt）发送给模型，
+    并返回模型生成的分析结果文本。
+
+    Args:
+        human_prompt (str): 发送给模型的文本提示，用于指导模型进行分析。
+
+    Returns:
+        str: 选择的模型 ID。
+
+    Raises:
+        Exception: 如果在加载配置文件、读取视频文件、初始化模型或查询模型时发生任何错误，将抛出异常。
+    """
+    Translator(from_lang="Chinese", to_lang="English").translate(require)
+    try:
+        with open(conf.get_path("models_file"), "r", encoding="utf-8") as f:
+            models = json.load(f)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"❌ Error in reading model file: {e}")
+
+    multimodal_model = get_gemini_multimodal_model(
+        system_prompt=CHOOSE_MODEL_SYSTEM_PROMPT.format(
+            models=str(models)), response_schema=CHOOSE_MODEL_RESPONSE_SCHEMA)
+
+    # 询问模型
+    try:
+        response = multimodal_model.generate_content(
+            [
+                require
+            ]
+        )
+    except Exception as e:
+        logger.error(f"❌ Error in querying the model: {e}")
+        raise
+
+    # 接收信息
+    content = json.loads(response.candidates[0].content.parts[0].text)
+    return content["model_id"]
+
+
+class MultimodalGenerationModel(ABC):
+    def __init__(self, id: str):
+        self.id = id
+
+    @abstractmethod
+    async def generate(self, **param):
+        """
+        param
+        t2i: positive_prompt, negative_prompt(optional)
+        i2i: image_path, positive_prompt, negative_prompt
+        """
+        raise NotImplementedError(
+            f"MultimodalGenerationModel {self.name} does not implement generate")
+
+
+class Gemini2_t2i(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "gemini2_t2i"
+
+    async def generate(self, **param):
+        positive_prompt = param["positive_prompt"]
+        negative_prompt = param["negative_prompt"]
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+
+
+class Gemini2_i2i(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "gemini2_i2i"
+
+    async def generate(self, **param):
+        image_path = param["image_path"]
+        positive_prompt = param["positive_prompt"]
+        negative_prompt = param["negative_prompt"]
+        if image_path is None:
+            raise ValueError("image_path不能为空")
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+
+
+class Flux_i2i(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "flux_i2i"
+
+    async def generate(self, **param):
+        image_path = param["image_path"]
+        positive_prompt = param["positive_prompt"]
+        negative_prompt = param["negative_prompt"]
+        if image_path is None:
+            raise ValueError("image_path不能为空")
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+
+
+class Qwen_t2i(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "qwen_t2i"
+
+    async def generate(self, **param):
+        positive_prompt = param["positive_prompt"]
+        negative_prompt = param["negative_prompt"]
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+
+
+class Kling_i2v(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "kling_i2v"
+
+    async def generate(self, **param):
+        image_path = param["image_path"]
+        positive_prompt = param["positive_prompt"]
+        negative_prompt = param["negative_prompt"]
+        if image_path is None:
+            raise ValueError("image_path不能为空")
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+
+
+class Wan2_1_t2i(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "wan2_1_t2i"
+
+    async def generate(self, **param):
+        positive_prompt = param["positive_prompt"]
+        negative_prompt = param["negative_prompt"]
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+
+
+class Wan2_2_5b_t2v(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "wan2_2_5b_t2v"
+
+    async def generate(self, **param):
+        positive_prompt = param["positive_prompt"]
+        negative_prompt = param["negative_prompt"]
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+
+
+class Wan2_2_14b_t2v(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "wan2_2_14b_t2v"
+
+    async def generate(self, **param):
+        positive_prompt = param["positive_prompt"]
+        negative_prompt = param["negative_prompt"]
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+
+
+class Wan2_2_14b_i2v(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "wan2_2_14b_i2v"
+
+    async def generate(self, **param):
+        image_path = param["image_path"]
+        positive_prompt = param["positive_prompt"]
+        negative_prompt = param["negative_prompt"]
+        if image_path is None:
+            raise ValueError("image_path不能为空")
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+
+
+class Veo3_t2v(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "veo3_t2v"
+
+    async def generate(self, **param):
+        positive_prompt = param["positive_prompt"]
+        negative_prompt = param["negative_prompt"]
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+
+
+class Veo3_i2v(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "veo3_i2v"
+
+    async def generate(self, **param):
+        image_path = param["image_path"]
+        positive_prompt = param["positive_prompt"]
+        negative_prompt = param["negative_prompt"]
+        if image_path is None:
+            raise ValueError("image_path不能为空")
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+
+
+class ModelFactory:
+    def __init__(self):
+        self.models = {
+            "gemini2_t2i": Gemini2_t2i(),
+            "gemini2_i2i": Gemini2_i2i(),
+            "flux_i2i": Flux_i2i(),
+            "qwen_t2i": Qwen_t2i(),
+            "kling_i2v": Kling_i2v(),
+            "wan2_1_t2i": Wan2_1_t2i(),
+            "wan2_2_5b_t2v": Wan2_2_5b_t2v(),
+            "wan2_2_14b_t2v": Wan2_2_14b_t2v(),
+            "wan2_2_14b_i2v": Wan2_2_14b_i2v(),
+            "veo3_t2v": Veo3_t2v(),
+            "veo3_i2v": Veo3_i2v(),
+        }
+
+    def get_model_by_id(self, model_id: str) -> MultimodalGenerationModel:
+        return self.models[model_id]
+
+
+model_factory = ModelFactory()

@@ -3,6 +3,9 @@
 提供网络爬取、文件管理、视频处理、CUDA管理等实用功能
 """
 
+from translate import Translator
+from agent.llm import get_gemini_multimodal_model
+import json
 from pathlib import Path
 import re
 import glob

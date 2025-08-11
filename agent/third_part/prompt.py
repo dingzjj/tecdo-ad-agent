@@ -1,5 +1,5 @@
-      
-      
+
+
 ANALYSE_IMAGE_VEO3_PROMPT_MODEL_SHOW_en = """
 Prompt Instruction:
 You are an expert in generating natural, elegant pose descriptions for clothing model videos.
@@ -100,7 +100,7 @@ Recommended Prompt Structure:
 """
 
 
-ANALYSE_IMAGE_VEO3_PROMPT_MODEL_WALK_WITH_SUGGESTION_en="""
+ANALYSE_IMAGE_VEO3_PROMPT_MODEL_WALK_WITH_SUGGESTION_en = """
 Prompt Instruction
  You are an expert in generating natural, elegant runway walk descriptions for clothing model videos.
  Your task is to generate a single English sentence describing the model’s walk and graceful body movements that match the clothing type and the visible body region in the image.
@@ -132,7 +132,7 @@ Output Format:
 """
 
 
-ANALYSE_IMAGE_KLING_PROMPT_MODEL_STAND_SHOW_en= """
+ANALYSE_IMAGE_KLING_PROMPT_MODEL_STAND_SHOW_en = """
 Prompt Instruction:
 You are an expert in generating natural, elegant pose descriptions for clothing model videos.
 Your task is to generate a single English sentence describing the model’s pose and graceful movements that match the product type and the visible region in the image.
@@ -165,7 +165,7 @@ if duration is 10 seconds: [Start with a pose or position] + [describe three gra
 """
 
 
-ANALYSE_IMAGE_KLING_PROMPT_MODEL_CAT_WALK_en= """
+ANALYSE_IMAGE_KLING_PROMPT_MODEL_CAT_WALK_en = """
 Prompt Instruction
  You are an expert in generating natural, elegant runway walk descriptions for clothing model videos.
  Your task is to generate a single English sentence describing the model’s walk and graceful body movements that match the clothing type and the visible body region in the image.
@@ -193,7 +193,7 @@ Output Format:
  Recommended Prompt Structure: [Start with walking posture or pace] + [describe arm/leg movement or body flow] + [mention clothing texture or sway] + [close with tone or effect].
 """
 
-ANALYSE_IMAGE_KLING_PROMPT_MODEL_STAND_SHOW_WITH_SUGGESTION_en= """
+ANALYSE_IMAGE_KLING_PROMPT_MODEL_STAND_SHOW_WITH_SUGGESTION_en = """
 Prompt Instruction:
 You are an expert in generating natural, elegant pose descriptions for clothing model videos.
 Your task is to generate a single English sentence describing the model’s pose and graceful movements that match the product type and the visible region in the image.
@@ -228,7 +228,7 @@ if duration is 10 seconds: [Start with a pose or position] + [describe three gra
 """
 
 
-ANALYSE_IMAGE_KLING_PROMPT_MODEL_CAT_WALK_WITH_SUGGESTION_en= """
+ANALYSE_IMAGE_KLING_PROMPT_MODEL_CAT_WALK_WITH_SUGGESTION_en = """
 Prompt Instruction
  You are an expert in generating natural, elegant runway walk descriptions for clothing model videos.
  Your task is to generate a single English sentence describing the model’s walk and graceful body movements that match the clothing type and the visible body region in the image.
@@ -268,7 +268,7 @@ ANALYSE_IMAGE_RESPONSE_SCHEMA = {
         }
     },
     "required": ["prompt"]
-} 
+}
 
 ANALYSE_IMAGE_HUMAN_PROMPT_en = """
 product: "{product}"
@@ -277,7 +277,7 @@ image_info: "{img_info}"
 duration: {duration}
 """
 
-ANALYSE_IMAGE_HUMAN_PROMPT_WITH_SUGGESTION_en ="""
+ANALYSE_IMAGE_HUMAN_PROMPT_WITH_SUGGESTION_en = """
 product: "{product}"
 product_info: "{product_info}"
 image_info: "{img_info}"
@@ -285,7 +285,7 @@ user_suggestion: "{user_suggestion}"
 duration: {duration}
 """
 
-MODIFY_KLING_PROMPT_WITH_SUGGESTION_en= """
+MODIFY_KLING_PROMPT_WITH_SUGGESTION_en = """
 You are an AI assistant responsible for modifying a video generation prompt according to the user's suggestion.
 Input Fields:
 - video_positive_prompt: The original positive prompt for video generation, describing the model's action.
@@ -298,7 +298,7 @@ Output Format:
 - A single English sentence describing the model’s action based on the input, ending with the fixed sentence above.
 """
 
-MODIFY_PROMPT_WITH_SUGGESTION_en ="""
+MODIFY_PROMPT_WITH_SUGGESTION_en = """
 video_positive_prompt: "{video_positive_prompt}"
 user_suggestion: "{user_suggestion}"
 """
@@ -343,4 +343,23 @@ ACTION_TYPES_CLASSIFIER_HUMAN_PROMPT_en = """
 {{"input_text" : "{input_text}", "categories" : {categories} }}
 """
 
-    
+
+CHOOSE_MODEL_SYSTEM_PROMPT = """
+You are a text analysis robot. 
+Based on the following model reference text and user requirement description, 
+and in accordance with the actual application situation, select the most suitable generation model.
+You only need to return the 'id' of the model which you choose.
+You can only choose from the following models:
+{models}
+"""
+
+CHOOSE_MODEL_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "model_id": {
+            "type": "string",
+            "description": "模型ID"
+        }
+    },
+    "required": ["model_id"]
+}
