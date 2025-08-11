@@ -11,11 +11,12 @@ from config import conf
 from config import logger, conf
 import os
 import uuid
+from agent.utils import get_time_id
 
 
 async def run_gemini2_i2i(img_path: str, prompt: str, output_image_dir: str):
     credentials = service_account.Credentials.from_service_account_file(
-        filename=conf.get("gemini_conf"))
+        filename=conf.get("gemini_conf"), scopes=[conf.get("gemini_config.scopes")])
     vertexai.init(project='ca-biz-vypngh-y97n', credentials=credentials)
     client = genai.Client(
         vertexai=True,
@@ -43,9 +44,9 @@ async def run_gemini2_i2i(img_path: str, prompt: str, output_image_dir: str):
         elif part.inline_data:
             try:
                 image_path = os.path.join(
-                    output_image_dir, f"{uuid.uuid4()}.png")
+                    output_image_dir, f"{get_time_id()}.png")
                 image = Image.open(BytesIO(part.inline_data.data))
                 image.save(image_path)
-                return output_image_dir
+                return image_path
             except Exception as e:
                 raise e
