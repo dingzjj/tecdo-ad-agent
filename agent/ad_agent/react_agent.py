@@ -98,13 +98,12 @@ AdAgents: dict[str, AdAgent] = {}
 
 
 @tool
-def get_material_from_link(self, link: str):
+def get_material_from_link(link: str):
     """
     根据链接获取素材
     :param link: 链接
     :return: 素材
     """
-
     return "素材获取成功，请在素材库中查看"
 
 

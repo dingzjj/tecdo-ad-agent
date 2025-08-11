@@ -8,7 +8,7 @@ from agent.exception import CreateVideoError
 from typing import Literal
 
 
-async def run_kling2_1_i2v(self, img_path, positive_prompt, negative_prompt, duration: Literal[5, 10]):
+async def run_kling2_1_i2v(img_path: str, positive_prompt: str, negative_prompt: str, duration: Literal[5, 10]):
     # 使用keling的api生成视频，最终返回一个url，url是视频的地址
     http_client = httpx.Client(timeout=httpx.Timeout(
         600.0, connect=60.0), follow_redirects=True)

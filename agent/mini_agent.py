@@ -1,4 +1,9 @@
-      
+
+from typing import Literal
+from agent.utils import get_time_id
+from config import conf
+import requests
+import os
 from agent.llm import get_gemini_multimodal_model
 from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
 from agent.ad_agent.prompt import ANALYSE_IMAGE_SYSTEM_PROMPT_en, ANALYSE_IMAGE_RESPONSE_SCHEMA, ANALYSE_IMAGE_HUMAN_PROMPT_en
@@ -36,6 +41,7 @@ class SellingPointsClassifier:
             except Exception as e:
                 logger.error(e)
 
+
 class ActionTypesClassifier:
     def __init__(self, categories: list[str]):
         # category_id,category_name
@@ -59,6 +65,7 @@ class ActionTypesClassifier:
                         return category["category_name"]
             except Exception as e:
                 logger.error(e)
+
 
 class Classifier:
     """
@@ -87,11 +94,8 @@ class Classifier:
                         return category["category_name"]
             except Exception as e:
                 logger.error(e)
-from typing import Literal
-import os
-import requests
-from config import conf
-from agent.utils import get_time_id
+
+
 class AnalyseImageAgent:
     """
     分析图片(人+商品)，返回图片信息
@@ -100,19 +104,17 @@ class AnalyseImageAgent:
     def __init__(self, model: str = "gemini-2.5-flash"):
         self.model = model
 
-    def analyse_image(self, product: str, image_path: str,source:Literal["web","local"],language:Literal["cn","en"]) -> str:
+    def analyse_image(self, product: str, image_path: str, source: Literal["web", "local"], language: Literal["cn", "en"]) -> str:
 
         match self.model:
             case "gemini-2.5-flash":
-                return self.analyse_image_with_gemini_2_5_flash(product, image_path,source)
+                return self.analyse_image_with_gemini_2_5_flash(product, image_path, source)
             case _:
                 raise ValueError(f"Unsupported model: {self.model}")
 
-    def analyse_image_with_gemini_2_5_flash(self, product: str, image_path: str,source:Literal["web","local"]) -> str:
-        
+    def analyse_image_with_gemini_2_5_flash(self, product: str, image_path: str, source: Literal["web", "local"]) -> str:
+
         if source == "web":
-            temp_dir = conf.get_path("temp_dir")
-            local_image_path = os.path.join(temp_dir, get_time_id())
             response = requests.get(image_path)
             image_data = response.content
         elif source == "local":
@@ -139,4 +141,33 @@ class AnalyseImageAgent:
         content = json.loads(content)
         return content["pictorial information"]
 
-    
+
+class AnalyseMaterialAgent:
+
+    def analyse_material(self, product: str, material_path: str, source: Literal["web", "local"]) -> str:
+
+        if source == "web":
+            response = requests.get(material_path)
+            material_data = response.content
+        elif source == "local":
+            with open(material_path, "rb") as file:
+                material_data = file.read()
+
+        mime_type, _ = mimetypes.guess_type(material_path)
+        if mime_type is None:
+            # 如果无法猜测，默认为 image/jpeg
+            mime_type = "image/jpeg"
+
+        gemini_generative_model = get_gemini_multimodal_model(
+            system_prompt=ANALYSE_IMAGE_SYSTEM_PROMPT_en,
+            response_schema=ANALYSE_IMAGE_RESPONSE_SCHEMA)
+
+        response = gemini_generative_model.generate_content(
+            [
+                ANALYSE_IMAGE_HUMAN_PROMPT_en.format(product=product),
+                Part.from_data(material_data, mime_type=mime_type)
+            ]
+        )
+        content = response.candidates[0].content.parts[0].text
+        content = json.loads(content)
+        return content["pictorial information"]

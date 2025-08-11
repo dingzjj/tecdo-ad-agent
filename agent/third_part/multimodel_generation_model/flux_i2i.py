@@ -41,7 +41,7 @@ async def run_flux_i2i(
     if not os.path.isfile(input_image_path):
         raise FileNotFoundError(f"输入图像文件不存在: {input_image_path}")
     # 2. 提取输入图像的文件名（不带扩展名）
-    input_image_name = os.path.splitext(os.path.basename(input_image_path))[0]
+    # input_image_name = os.path.splitext(os.path.basename(input_image_path))[0]
     # 3. 确保输出目录存在，否则自动创建
     os.makedirs(output_image_dir, exist_ok=True)
     # 4. 加载模型管道（假设 create_pipe() 已定义）

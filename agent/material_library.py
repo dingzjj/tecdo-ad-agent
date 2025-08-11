@@ -24,7 +24,7 @@ os.makedirs(conf.get_path("material_library_dir"), exist_ok=True)
 # 路径： 素材库地址 + 素材id
 
 # 素材所在Path: 素材库地址 + 素材id
-
+from agent.mini_agent import AnalyseMaterialAgent
 
 class Material(BaseModel):
     """
@@ -61,8 +61,8 @@ class Material(BaseModel):
         for sub_material_id, sub_material_path in self.sub_material_path_list.items():
             # 1. 通过链接获取图片
             # 2. 对图片进行分析
-            analysis_result = AnalyseImageAgent().analyse_image(
-                self.title, sub_material_path, source="local")
+            analysis_result = AnalyseMaterialAgent().analyse_material(
+                product=self.title, material_path=sub_material_path, source="local")
             # 3. 将分析结果保存到self.sub_material_path_list中
             self.sub_material_content_list[sub_material_id] = (
                 sub_material_path, analysis_result)
