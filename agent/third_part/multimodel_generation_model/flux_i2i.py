@@ -1,3 +1,4 @@
+from agent.utils import get_time_id
 import torch
 from diffusers import FluxKontextPipeline
 from diffusers.utils import load_image
@@ -5,6 +6,7 @@ from PIL import Image
 import os
 from accelerate import Accelerator
 from agent.utils import get_cuda
+from config import conf, logger
 
 
 def create_pipe(output_images_num):
@@ -14,7 +16,7 @@ def create_pipe(output_images_num):
     ).to(f"cuda:{get_cuda(output_images_num*35.0)}")
 
 
-def create_image(
+async def run_flux_i2i(
     input_image_path: str,
     prompt: str,
     output_image_dir: str,
@@ -60,8 +62,7 @@ def create_image(
     output_paths = []
     for i, img in enumerate(images):
         # 构造输出文件名：{输入文件名}_output_{编号}.png
-        output_filename = f"{input_image_name}_output_{i}.png"
-        output_path = os.path.join(output_image_dir, output_filename)
+        output_path = os.path.join(output_image_dir, f"{get_time_id()}.png")
         img.save(output_path)
         output_paths.append(output_path)
 
