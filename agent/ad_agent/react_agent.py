@@ -1,11 +1,12 @@
 # 采用reAct框架 不断的调工具 - 直到得出结果（需要工具输出的src比较完善）
+from pydantic import BaseModel, Field, root_validator
 from click.decorators import pass_meta_key
 from agent.ad_agent.prompt import AD_AGENT_SYSTEM_PROMPT_cn
 from langchain_core.tools.base import ArgsSchema, BaseTool
 from langchain_core.messages import HumanMessage
 from agent.ad_agent.prompt import AD_AGENT_HUMAN_PROMPT_cn
-from agent.e_commerce_agent.material_library import Material
-from agent.e_commerce_agent.material_library import MaterialLibrary
+from agent.material_library import Material
+from agent.material_library import MaterialLibrary
 from agent.utils import get_time_id
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, START, END
@@ -54,7 +55,18 @@ class AdAgentState(BaseModel):
     chat_and_tool_history: list[BaseMessage] = Field(
         default=[], description="聊天和工具调用历史,用于记录用户与agent的对话和工具调用")
     material_library: MaterialLibrary = Field(
-        default=MaterialLibrary(), description="素材库")
+        default=None, description="素材库")
+
+    @root_validator(pre=True)
+    def set_material_library(cls, values):
+        user_id = values.get('user_id')
+        if user_id:
+            material_library_dir = os.path.join(
+                conf.get_path("material_library_dir"), user_id)
+            os.makedirs(material_library_dir, exist_ok=True)
+            values['material_library'] = MaterialLibrary(
+                material_library_dir=material_library_dir)
+        return values
 
 
 AdAgents = {}
@@ -166,6 +178,7 @@ def pre_review_material(self, overhead_information: dict = {}):
 
 
 # 用户给定图片or没有给定
+
 @tool
 def create_video_by_t2v(user_id: str, require: str):
     """
@@ -179,7 +192,7 @@ def create_video_by_t2v(user_id: str, require: str):
 @tool
 def create_video_by_i2v_wo_assign(user_id: str, require: str, overhead_information: dict = {}):
     """
-    用户没有指定图片或者用户希望根据其输入的图片来生成视频，使用image-to-video模型创建视频
+    用户没有指定图片或者用户希望根据其在附加输入中输入的图片来生成视频，使用image-to-video模型创建视频
     :param user_id: 用户id
     :param require: 需求
     :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
@@ -199,14 +212,19 @@ def create_video_by_i2v_wo_assign(user_id: str, require: str, overhead_informati
 
 
 @tool
-def create_video_by_i2v_with_assign(user_id: str, require: str, overhead_information: dict = {}):
+def create_video_by_i2v_with_assign(user_id: str, require: str, material_id: str):
     """
-    用户指定了图片，使用image-to-video模型创建视频
+    用户指定了使用素材库中的图片来生成视频，使用image-to-video模型创建视频
     :param user_id: 用户id
     :param require: 需求
-    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
+    :param material_id: 素材id
     """
-    pass
+    # 从素材库中获取素材
+    material = AdAgents[user_id].state.material_library.get_material_by_id(
+        material_id)
+    if material is None:
+        return f"素材{material_id}不存在"
+    # 使用以上图片 + 需求 来创建视频
 
 
 @tool
@@ -222,20 +240,31 @@ def create_image_by_t2i(user_id: str, require: str):
 @tool
 def create_image_by_i2i_wo_assign(user_id: str, require: str, overhead_information: dict = {}):
     """
-    用户没有指定图片或者用户希望根据其输入的图片来生成图片，使用image-to-image模型创建图片
+    用户没有指定图片或者用户希望根据其在附加输入中输入的图片来生成图片，使用image-to-image模型创建图片
     :param user_id: 用户id
     :param require: 需求
     :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
     """
-    pass
+    input_image_list = []
+    # 判断其中是否有image_开头
+    for key, value in overhead_information.items():
+        if key.startswith("image_"):
+            # 使用image-to-video模型创建视频
+            input_image_list.append(value)
+    if len(input_image_list) == 0:
+        # 在素材库中选择合适的素材
+        pass
+    else:
+        # 使用以上图片 + 需求 来创建视频
+        pass
 
 
 @tool
-def create_image_by_i2i_with_assign(user_id: str, require: str, overhead_information: dict = {}):
+def create_image_by_i2i_with_assign(user_id: str, require: str, material_id: str):
     """
     用户指定了图片，使用image-to-image模型创建图片
     :param user_id: 用户id
     :param require: 需求
-    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
+    :param material_id: 素材id
     """
     pass

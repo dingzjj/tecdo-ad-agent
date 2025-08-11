@@ -488,7 +488,7 @@ def rename_files_to_img_sequence(folder_path, start_index=None):
 
 def clear_empty_dir(dir_paths: list[str]):
     """
-    清空目录及其子目录下的所有空文件夹（不包含文件的文件夹会被删除）。
+    清空目录的子目录下的所有空文件夹（不包含文件的文件夹会被删除）。
     Args:
         dir_paths (list[str]): 要检查的目录路径列表。
     """
