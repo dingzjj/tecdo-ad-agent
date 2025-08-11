@@ -1,4 +1,4 @@
-from agent.ad_agent.pojo import gradio_chat_message_list2chat_message_list
+from agent.ad_agent.pojo import gradio_chat_message_list2ad_agent_chat_message_list, AdAgentChatMessage
 from agent.ad_agent.react_agent import AdAgents
 from agent.ad_agent.react_agent import AdAgent
 import asyncio
@@ -6,14 +6,11 @@ import os
 import traceback
 from langchain_core.messages import HumanMessage
 # 第三方库导入
-from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command, Interrupt
-from agent.ad_agent.m2v_workflow import GenerateVideoState
 # 本地模块导入
 from config import conf, logger
 from agent.ad_agent.do_workflow import do_workflow_app
 from typing import List
-from agent.ad_agent.m2v_workflow import VideoFragment
 import gradio as gr
 import time
 from modules.util import chatbot_to_chat_history

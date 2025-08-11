@@ -32,24 +32,20 @@ class Material(BaseModel):
     link_list: 链接
     title: 标题(若为电商网站的爬取则为商品名称，若为网页的爬取则为网页标题)
     description: 描述(对于素材的描述，即从哪来等基础信息)
-    img_url_list: 图片链接
     以下Path都为相对路径，相对于素材的路径，素材的路径 = 素材库地址 + 素材id
     """
     id: str = Field(description="素材id")
     link_list: list[str] = Field(description="链接列表")
     title: str = Field(description="标题")
     description: str = Field(description="描述")
-    img_id: int = Field(default=1, description="图片id")
+    sub_material_id: int = Field(default=1, description="next sub_material id")
     # 只会在v1 or v2 存在
-
-    all_img_list: dict[int, Literal["img_path_list", "img_content_list"]] = Field(
-        default={}, description="图片id:图片所在列表")
     # v1 - 只要有图片就下载下来
-    img_path_list: dict[int, str] = Field(
-        default={}, description="id:(图片链接(in local))")
+    sub_material_path_list: dict[int, str] = Field(
+        default={}, description="id:sub_material链接(in local)")
     # v2
-    img_content_list: dict[int, tuple[str, str]] = Field(
-        default={}, description="id:(图片链接(in local),图片内容)")
+    sub_material_content_list: dict[int, tuple[str, str]] = Field(
+        default={}, description="id:sub_material链接(in local),material内容")
 
     async def analyze_material(self):
         """
@@ -61,33 +57,28 @@ class Material(BaseModel):
         img_dir = os.path.join(conf.get_path(
             "material_library_dir"), self.id, "images")
         os.makedirs(img_dir, exist_ok=True)
-        # 对img_path_list中的图片进行分析
-        for (img_path, img_id) in self.img_path_list:
+        # 对sub_material_path_list中的sub_material进行分析
+        for sub_material_id, sub_material_path in self.sub_material_path_list.items():
             # 1. 通过链接获取图片
             # 2. 对图片进行分析
             analysis_result = AnalyseImageAgent().analyse_image(
-                self.title, img_path, source="local")
-            # 3. 将分析结果保存到self.img_path_list中
-            self.img_content_list[img_id] = (img_path, analysis_result)
-            self.all_img_list[img_id] = "img_content_list"
-        self.img_path_list = []
+                self.title, sub_material_path, source="local")
+            # 3. 将分析结果保存到self.sub_material_path_list中
+            self.sub_material_content_list[sub_material_id] = (
+                sub_material_path, analysis_result)
+            # 删除sub_material_path_list中该元素
+        self.sub_material_path_list = {}
 
-    async def get_material_by_id(self, id: str):
+    async def get_material_by_id(self, sub_material_id: int):
         """
         根据id获取素材
         :param id: 素材id（详细ID）
-        :return:图片or视频
+        :return:sub_material_path_list or sub_material_content_list
         """
-        id_list = id.split("_")
-        material_id = id_list[0]
-        img_id = id_list[1]
-        img_type = self.all_img_list[int(img_id)]
-        if not img_type:
-            return None
-        if img_type == "img_path_list":
-            return self.img_path_list[id]
-        elif img_type == "img_content_list":
-            return self.img_content_list[id][0]
+        if sub_material_id in self.sub_material_path_list:
+            return self.sub_material_path_list[sub_material_id]
+        elif sub_material_id in self.sub_material_content_list:
+            return self.sub_material_content_list[sub_material_id][0]
         return None
 
 
@@ -111,11 +102,13 @@ class MaterialLibrary(BaseModel):
     def get_material_by_id(self, id: str):
         """
         根据id获取素材
-        :param id: 素材id（详细ID）
+        :param id: 素材id（详细ID），例如3_1，表示素材3的子素材1
         :return: 素材,有可能为None
         """
-
-        return self.material_list[id]
+        id_list = id.split("_")
+        material_id = id_list[0]
+        sub_material_id = id_list[1]
+        return self.material_list[material_id].get_material_by_id(int(sub_material_id))
 
     def append_material(self, material: Material):
         """
@@ -124,15 +117,24 @@ class MaterialLibrary(BaseModel):
         """
         self.material_list[material.id] = material
 
+    def insert_material_with_one_sub_material(self, title, description, sub_material_path: str):
+        self.append_material(Material(id=self.get_id(), title=title,
+                                      description=description, sub_material_content_list={1: (sub_material_path, description)}))
+
     def select_appropriate_material(self, require: str) -> list[str]:
         """
         根据需求选择合适的素材
         :param require: 需求
         :return: 素材
         """
+        # 先对所有素材进行分析(并行运行)
+        tasks = [material.analyze_material()
+                 for material in self.material_list.values()]
+        asyncio.run(asyncio.gather(*tasks))
+        material_library = self.get_all_material_info()
         gemini_generative_model = get_gemini_multimodal_model(
             SELECT_APPROPRIATE_MATERIAL_SYSTEM_PROMPT_en.format(
-                expert_knowledge=SELECT_APPROPRIATE_MATERIAL_EXPERT_KNOWLEDGE_en), SELECT_APPROPRIATE_MATERIAL_SYSTEM_PROMPT_SCHEMA)
+                expert_knowledge=SELECT_APPROPRIATE_MATERIAL_EXPERT_KNOWLEDGE_en, material_library=material_library), SELECT_APPROPRIATE_MATERIAL_SYSTEM_PROMPT_SCHEMA)
 
         response = gemini_generative_model.generate_content(
             [
@@ -154,7 +156,6 @@ class MaterialLibrary(BaseModel):
             self.crawl_material_in_web(keyword))
         for material in material_list:
             self.append_material(material)
-            self.next_id += 1
 
     def return_material_list(self):
         """
@@ -172,10 +173,10 @@ class MaterialLibrary(BaseModel):
         img_content_list: dict[int, tuple[str, str]] = Field(
         default={}, description="id:(图片链接(in local),图片内容)")
             """
-            material_list.extend([(os.path.join(self.material_library_dir, material_id, img_path), str(f"{material_id}_{img_id}"))
-                                 for img_id, img_path in material.img_path_list.items()])
-            material_list.extend([(os.path.join(self.material_library_dir, material_id, img_path), str(f"{material_id}_{img_id}"))
-                                 for img_id, img_path, _ in material.img_content_list.items()])
+            material_list.extend([(os.path.join(self.material_library_dir, material_id, sub_material_path), str(f"{material_id}_{sub_material_id}"))
+                                 for sub_material_id, sub_material_path in material.sub_material_path_list.items()])
+            material_list.extend([(os.path.join(self.material_library_dir, material_id, sub_material_path), str(f"{material_id}_{sub_material_id}"))
+                                 for sub_material_id, sub_material_path, _ in material.sub_material_content_list.items()])
         return material_list
 
     async def crawl_material_in_web(self, keyword: str) -> list[Material]:
@@ -287,10 +288,8 @@ class MaterialLibrary(BaseModel):
                         link_list=[link],
                         title=title,
                         description=f"Amazon material for '{keyword}'",
-                        img_id=len(img_list) + 1,
-                        img_path_list=img_path_dict,
-                        all_img_list={
-                            i+1: "img_path_list" for i in range(len(img_list))}
+                        sub_material_path_list=img_path_dict,
+                        sub_material_content_list={}
                     )
                     materials.append(material)
                 else:

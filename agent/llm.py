@@ -1,16 +1,8 @@
-import google.cloud.aiplatform_v1.types
 from config import conf
-from typing import Callable, List, Optional
+from typing import List
 import os
-import matplotlib.pyplot as plt
-from google.genai import types
-from PIL import Image as PIL_Image
 from google.genai.types import GenerateVideosConfig, Image
-import uuid
 from agent.third_part.aliyunoss import share_file_in_oss
-import time
-import asyncio
-import httpx
 from http import HTTPStatus
 from dashscope import VideoSynthesis
 from google import genai

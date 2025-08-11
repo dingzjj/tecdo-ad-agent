@@ -5,21 +5,10 @@ from agent.llm import get_gemini_multimodal_model
 from agent.third_part.prompt import CHOOSE_MODEL_SYSTEM_PROMPT, CHOOSE_MODEL_RESPONSE_SCHEMA
 import json
 from translate import Translator
-import os
-from typing import Dict, Any, Optional
-import requests
-import subprocess
-import base64
 from typing import Literal
-from agent.third_part.aliyunoss import share_file_in_oss
 from config import conf
-import asyncio
-import time
-import uuid
-import httpx
 from abc import abstractmethod, ABC
 from config import logger
-from agent.exception import CreateVideoError
 
 
 class MultimodalGenerationModel(ABC):
@@ -209,6 +198,9 @@ class ModelFactory:
 
     def get_model_by_id(self, model_id: str) -> MultimodalGenerationModel:
         return self.models[model_id]
+
+    def choose_model_by_specific_function(self, require: str, specific_function: Literal["t2i", "i2i", "t2v", "i2v"]) -> str:
+        pass
 
     def choose_model(self, require: str) -> str:
         """

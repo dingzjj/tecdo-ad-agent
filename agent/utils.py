@@ -3,10 +3,7 @@
 提供网络爬取、文件管理、视频处理、CUDA管理等实用功能
 """
 
-from translate import Translator
-from agent.llm import get_gemini_multimodal_model
 import json
-from pathlib import Path
 import re
 import glob
 import os
@@ -18,7 +15,7 @@ import uuid
 import urllib.parse
 import mimetypes
 from contextlib import contextmanager
-from typing import List, Optional, Tuple, Dict, Any, Union
+from typing import List, Optional, Tuple, Dict, Any
 
 import torch
 import requests
@@ -522,3 +519,15 @@ def clear_empty_dir_in_project():
     result_dir = conf.get_path("result_dir")
     material_library_dir = conf.get_path("material_library_dir")
     clear_empty_dir([user_dir, temp_dir, result_dir, material_library_dir])
+
+
+def is_image_file(file_path: str) -> bool:
+    # 常见图片文件扩展名
+    image_extensions = {".jpg", ".jpeg", ".png",
+                        ".gif", ".bmp", ".tiff", ".webp"}
+
+    # 获取文件后缀
+    _, file_extension = os.path.splitext(file_path)
+
+    # 判断后缀是否是图片格式之一
+    return file_extension.lower() in image_extensions

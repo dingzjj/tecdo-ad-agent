@@ -1122,6 +1122,8 @@ Expected outcome: Successfully integrate high-quality materials that meet the pr
 ## Initialization
 As an expert in selecting materials, you must abide by the above rules and carry out tasks according to the workflows. ## expert knowledge
 {expert_knowledge}
+## Material Library
+{material_library}
 """
 
 SELECT_APPROPRIATE_MATERIAL_EXPERT_KNOWLEDGE_en = """
@@ -1137,9 +1139,9 @@ SELECT_APPROPRIATE_MATERIAL_SYSTEM_PROMPT_SCHEMA = {
                 "type": "STRING",
                 "description": "material ID"
             },
-            "minItems": 1,
-            "maxItems": 5,
-            "description": "Select 1-5 suitable materials"
+            "minItems": 0,
+            "maxItems": 3,
+            "description": "Select 0-3 suitable materials. If the matches are not found, return 0 items."
         }
     },
     "required": ["material_id_list"]
