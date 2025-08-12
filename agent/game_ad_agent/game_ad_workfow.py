@@ -40,7 +40,7 @@ def judge_phone_orientation(game_img) -> bool:
 
 
 def inpaint_background(background_img, phone_and_game_img):
-    workflow_json_path = conf.get_path("inpaint_workflow_json_path")
+    workflow_json_path = conf.get_path("comfyui.inpaint_workflow_json_path")
     if not os.path.exists(workflow_json_path):
         raise FileNotFoundError(f"workflow_json_path: {
                                 workflow_json_path} not found")
@@ -81,7 +81,7 @@ def inpaint_background(background_img, phone_and_game_img):
 
         client_id = str(uuid.uuid4())
         resp = requests.post(
-            f"http://{conf.get("comfyui_server_address")}/prompt",
+            f"http://{conf.get("comfyui.server_address")}/prompt",
             headers={"Content-Type": "application/json"},
             json={"prompt": workflow, "clientId": client_id},
         )
@@ -90,7 +90,7 @@ def inpaint_background(background_img, phone_and_game_img):
 
         while True:
             history_resp = requests.get(
-                f"http://{conf.get("comfyui_server_address")}/history/{prompt_id}")
+                f"http://{conf.get("comfyui.server_address")}/history/{prompt_id}")
             history_data = history_resp.json()
             if prompt_id in history_data and "outputs" in history_data[prompt_id]:
                 break
@@ -108,7 +108,7 @@ def inpaint_background(background_img, phone_and_game_img):
                     "subfolder": image_info.get("subfolder", ""),
                     "type": image_info.get("type", "temp"),
                 }
-                view_url = f"http://{conf.get("comfyui_server_address")}/view"
+                view_url = f"http://{conf.get("comfyui.server_address")}/view"
                 try:
                     image_resp = requests.get(view_url, params=params)
                     if image_resp.status_code != 200:

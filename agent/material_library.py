@@ -42,10 +42,10 @@ class Material(BaseModel):
     description: str = Field(description="描述")
     sub_material_id: int = Field(default=1, description="next sub_material id")
     # 只会在v1 or v2 存在
-    # v1 - 只要有图片就下载下来
+    # v1 没有经过分析
     sub_material_path_list: dict[int, str] = Field(
         default={}, description="id:sub_material链接(in local)")
-    # v2
+    # v2 经过分析or有确切描述的，会将子素材放入此处，material内容(有经过gemini2.5-flash分析 or 有确切描述)
     sub_material_content_list: dict[int, tuple[str, str]] = Field(
         default={}, description="id:sub_material链接(in local),material内容")
 
@@ -55,10 +55,6 @@ class Material(BaseModel):
         :param material: 素材
         :return: 分析结果
         """
-        # 对img_url_list中的图片进行分析
-        img_dir = os.path.join(conf.get_path(
-            "material_library_dir"), self.id, "images")
-        os.makedirs(img_dir, exist_ok=True)
         # 并行分析素材
         tasks = []
         for sub_material_id, sub_material_path in self.sub_material_path_list.items():
@@ -68,7 +64,8 @@ class Material(BaseModel):
                 asyncio.create_task(
                     AnalyseMaterialAgent().analyse_material(
                         product=self.title,
-                        material_path=sub_material_path,
+                        material_path=os.path.join(
+                            conf.get_path("material_library_dir"), self.id, sub_material_path),
                         source="local"
                     )
                 )

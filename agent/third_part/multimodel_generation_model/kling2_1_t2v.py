@@ -3,6 +3,10 @@ import httpx
 import asyncio
 from typing import Literal
 from config import conf
+from config import logger
+from agent.exception import CreateVideoError
+from agent.utils import get_time_id
+import os
 
 
 async def run_kling2_1_t2v(prompt: str, negative_prompt: str, duration: Literal[5, 10], output_dir: str):
@@ -10,9 +14,10 @@ async def run_kling2_1_t2v(prompt: str, negative_prompt: str, duration: Literal[
         600.0, connect=60.0), follow_redirects=True)
     KLING_API_KEY = conf.get("KLING_API_KEY")
     KLING_SECRET = conf.get("KLING_SECRET")
-    KLING_API_BASE_URL = "https://dev01-ai-orchestration.tec-develop.cn/api/ai/kelin/v1"
+    KLING_API_BASE_URL = conf.get("KLING_API_BASE_URL")
     payload = {
-        "model": "kling-v2-1",  # kling-v1, kling-v1-6, kling-v2-master, kling-v2-1-master
+        # t2v: kling-v1, kling-v1-6, kling-v2-master, kling-v2-1-master
+        "model": "kling-v2-1-master",
         "mode": "pro",  # std 标准，pro 增强
         "prompt": prompt,
         "negative_prompt": negative_prompt,
@@ -33,7 +38,6 @@ async def run_kling2_1_t2v(prompt: str, negative_prompt: str, duration: Literal[
     timeout = httpx.Timeout(600.0, connect=60.0)
     http_client = httpx.Client(timeout=timeout, follow_redirects=True)
 
-    KLING_API_BASE_URL = "https://dev01-ai-orchestration.tec-develop.cn/api/ai/kelin/v1"
     headers = {
         "X-API-Key": KLING_API_KEY,
         "X-Secret-Key": KLING_SECRET,
@@ -51,38 +55,46 @@ async def run_kling2_1_t2v(prompt: str, negative_prompt: str, duration: Literal[
             response.raise_for_status()
             data = response.json()
         except httpx.RequestError as e:
-            print(f"请求异常: {type(e).__name__}: {e}")
-            return None
+            logger.error(f"请求异常: {type(e).__name__}: {e}")
+            raise CreateVideoError(f"请求异常: {type(e).__name__}: {e}")
         except httpx.HTTPStatusError as e:
-            print(f"请求失败，状态码：{e.response.status_code}")
-            return None
+            logger.error(f"请求失败，状态码：{e.response.status_code}")
+            raise CreateVideoError(f"请求失败，状态码：{e.response.status_code}")
         except Exception as e:
-            print(f"解析响应失败: {e}")
-            return None
+            logger.error(f"解析响应失败: {e}")
+            raise CreateVideoError(f"解析响应失败: {e}")
 
         task_status = data.get("task_status")
-        print(f"任务状态: {task_status}")
-
         if time.time() - start_time > max_wait:
-            print("等待超时，任务未完成。")
-            return None
+            logger.error("等待超时，任务未完成。")
+            raise CreateVideoError("等待超时，任务未完成。")
 
         if task_status == "processing":
-            print("视频正在处理中，继续等待...")
+            logger.info("视频正在处理中，继续等待...")
         elif task_status == "submitted":
-            print("任务已提交，等待处理...")
+            logger.info("任务已提交，等待处理...")
         elif task_status == "succeed":
-            print("视频已生成！")
             video_list = data.get("videos", [])
+            logger.info(f"视频生成成功，视频列表: {video_list}")
             if video_list:
-                return video_list[0].get("url")
+                url = video_list[0].get("url")
+                if url:
+                    # 将url保存到本地
+                    video_path = os.path.join(
+                        output_dir, f"{get_time_id()}.mp4")
+                    response = http_client.get(url)
+                    with open(video_path, "wb") as f:
+                        f.write(response.content)
+                    return video_path
+                else:
+                    logger.error("视频结果为空。")
+                    raise CreateVideoError("视频结果为空。")
             else:
-                print("视频结果为空。")
-                return None
+                logger.error("视频结果为空。")
+                raise CreateVideoError("视频结果为空。")
         elif task_status == "failed":
-            print("任务失败，无法获取视频。")
-            return None
+            logger.error("任务失败，无法获取视频。")
+            raise CreateVideoError("任务失败，无法获取视频。")
         else:
-            print(f"未知任务状态: {task_status}")
-
+            logger.error(f"未知任务状态: {task_status}")
         await asyncio.sleep(interval)

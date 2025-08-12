@@ -204,6 +204,40 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
     is_end = gr.State(True)
     m2v_v1_group_number = gr.State(3)
     m2v_v1_group_img_container_number = gr.State(5)
+
+    with gr.Tab("ad agent"):
+        with gr.Row():
+            # with gr.Column(scale=1):
+            #     gr.Markdown("## 会话管理")
+            with gr.Column(scale=2):
+                gr.Markdown("## 聊天区域")
+                chatbot = gr.Chatbot(
+                    label="聊天记录",
+                    value=[],
+                    type="messages",
+                    height=700,
+                    elem_classes=["chatbot-container"],
+                    show_label=False
+                )
+
+                ad_agent_user_input = gr.MultimodalTextbox(
+                    label="",
+                    placeholder="请输入内容...",
+                    file_count="multiple",
+                    elem_id="ad_agent_user_input",
+                    elem_classes=["user-input"],
+                )
+            with gr.Column(scale=2):
+                # 素材库
+                gr.Markdown("## 素材库")
+                ad_agent_material_library = gr.Gallery(
+                    label="素材库",
+                    file_types=["image"],
+                    type="filepath",
+                    height=700,
+                    interactive=False,
+                )
+
     with gr.Tab("model image to video v1"):
         with gr.Row():
             # 左侧：图片和提示词输入
@@ -583,39 +617,6 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                 height=200,
                 interactive=False
             )
-
-    with gr.Tab("ad agent"):
-        with gr.Row():
-            # with gr.Column(scale=1):
-            #     gr.Markdown("## 会话管理")
-            with gr.Column(scale=2):
-                gr.Markdown("## 聊天区域")
-                chatbot = gr.Chatbot(
-                    label="聊天记录",
-                    value=[],
-                    type="messages",
-                    height=700,
-                    elem_classes=["chatbot-container"],
-                    show_label=False
-                )
-
-                ad_agent_user_input = gr.MultimodalTextbox(
-                    label="",
-                    placeholder="请输入内容...",
-                    file_count="multiple",
-                    elem_id="ad_agent_user_input",
-                    elem_classes=["user-input"],
-                )
-            with gr.Column(scale=2):
-                # 素材库
-                gr.Markdown("## 素材库")
-                ad_agent_material_library = gr.Gallery(
-                    label="素材库",
-                    file_types=["image"],
-                    type="filepath",
-                    height="100%",
-                    interactive=False,
-                )
 
     m2v_v1_clear_btn_output = list(m2v_v1_group1_container_img)
     m2v_v1_clear_btn_output.extend(m2v_v1_group2_container_img)

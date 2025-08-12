@@ -56,7 +56,7 @@ async def run_kling2_1_i2v(img_path: str, positive_prompt: str, negative_prompt:
             data = response.json()
         except httpx.RequestError as e:
             logger.error(f"请求异常: {type(e).__name__}: {e}")
-            raise Exception(f"请求异常: {type(e).__name__}: {e}")
+            raise CreateVideoError(f"请求异常: {type(e).__name__}: {e}")
         except httpx.HTTPStatusError as e:
             logger.error(f"请求失败，状态码：{e.response.status_code}")
             raise CreateVideoError(f"请求失败，状态码：{e.response.status_code}")

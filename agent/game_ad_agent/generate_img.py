@@ -67,9 +67,9 @@ def generate_image_v1(image_prompt):
     生成文生图的图片 by WAN
     输出图片的cv格式
     """
-    comfyui_server_address = conf.get("comfyui_server_address")
+    comfyui_server_address = conf.get("comfyui.server_address")
     client_id = str(uuid.uuid4())  # generate client_id
-    prompt = get_workflow(conf.get_path("WAN_generate_img_workflow_file"))
+    prompt = get_workflow(conf.get_path("comfyui.WAN_generate_img_workflow_file"))
     prompt = modify_workflow(prompt, image_prompt)
     # 运行
     prompt_id = post_job(comfyui_server_address, client_id, prompt)

@@ -1,4 +1,5 @@
 # 采用reAct框架 不断的调工具 - 直到得出结果（需要工具输出的src比较完善）
+from agent.utils import is_video_file
 from config import logger
 from langchain_core.messages import SystemMessage
 from agent.utils import is_image_file
@@ -89,10 +90,12 @@ class AdAgent:
         """
 
         react_agent = create_react_agent(
+            # prompt=SystemMessage(content=AD_AGENT_SYSTEM_PROMPT_cn.format(
+            #     user_id=self.user_id, material_library=self.state.material_library.get_all_material_info())),
             prompt=SystemMessage(content=AD_AGENT_SYSTEM_PROMPT_cn.format(
-                user_id=self.user_id, material_library=self.state.material_library.get_all_material_info())),
+                user_id=self.user_id)),
             model=create_azure_llm(),
-            tools=[get_material_from_link, get_material_in_web, upload_material, pre_review_material, create_image_by_t2i, create_video_by_t2v,
+            tools=[get_material_from_link, get_material_in_web, upload_material, pre_review_material_in_material_library, pre_review_material_in_user_input, create_image_by_t2i, create_video_by_t2v,
                    create_video_by_i2v_wo_assign, create_video_by_i2v_with_assign, create_image_by_i2i_wo_assign, create_image_by_i2i_with_assign]
         )
         NOW_EPOCH_CHAT_HISTORY = chat_history.copy()
@@ -151,14 +154,42 @@ def get_material_in_web(user_id: str, keyword: str):
     """
     if user_id not in AdAgents:
         raise ValueError(f"用户{user_id}不存在")
-    AdAgents[user_id].state.material_library.crawl_material_in_web(keyword)
+    asyncio.run(
+        AdAgents[user_id].state.material_library.crawl_material_in_web(keyword))
     return "素材爬取成功,请在素材库中查看"
 
 
 @tool
-def pre_review_material(overhead_information: dict):
+def pre_review_material_in_material_library(user_id: str, material_id: str):
     """
-    预审素材
+    预审素材,预审素材库中的素材，
+    :param user_id: 用户id
+    :param material_id: 素材id,素材id的格式为"{number}_{number}"，例如"1_1"
+    """
+    if user_id not in AdAgents:
+        raise ValueError(f"用户{user_id}不存在")
+    material_path = AdAgents[user_id].state.material_library.get_material_by_id(
+        material_id)
+    if material_path is None:
+        return f"素材{material_id}不存在"
+    if not (is_image_file(material_path) or is_video_file(material_path)):
+        return f"素材{material_id}不是图片或视频"
+    result = process_media(
+        media_file=material_path,
+        MEDIASHIELD_GEMINI_API_KEY=conf.get(
+            "MEDIASHIELD_GEMINI_API_KEY"),
+        MEDIASHIELD_GPT_API_KEY=conf.get("MEDIASHIELD_GPT_API_KEY"),
+        similarity_threshold=0.4,
+        text_input=None,
+        screenshot=None
+    )
+    return result
+
+
+@tool
+def pre_review_material_in_user_input(overhead_information: dict):
+    """
+    预审素材，预审用户输入的图片，文档，文件
     :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
     """
     pre_review_material_result_list = []
@@ -183,6 +214,7 @@ def pre_review_material(overhead_information: dict):
     for index, pre_review_material_result in enumerate(pre_review_material_result_list):
         pre_review_material_content += f"""素材{index + 1}
             的预审结果为{pre_review_material_result}"""
+
     return pre_review_material_content
 
 

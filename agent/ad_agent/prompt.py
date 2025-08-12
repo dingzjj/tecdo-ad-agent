@@ -1199,5 +1199,4 @@ AD_AGENT_SYSTEM_PROMPT_cn = """
 
 ## Initialization
 用户id:{user_id}
-素材库的信息:{material_library}
 """

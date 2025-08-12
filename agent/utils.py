@@ -531,3 +531,15 @@ def is_image_file(file_path: str) -> bool:
 
     # 判断后缀是否是图片格式之一
     return file_extension.lower() in image_extensions
+
+
+def is_video_file(file_path: str) -> bool:
+    # 常见视频文件扩展名
+    video_extensions = {".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv",
+                        ".mpeg", ".mpg", ".m4v", ".webm", ".ogg", ".ogv", ".m3u8"}
+
+    # 获取文件后缀
+    _, file_extension = os.path.splitext(file_path)
+
+    # 判断后缀是否是视频格式之一
+    return file_extension.lower() in video_extensions

@@ -1,0 +1,155 @@
+{
+    "3": {
+        "inputs": {
+            "seed": 122084693777398,
+            "steps": 25,
+            "cfg": 3,
+            "sampler_name": "euler",
+            "scheduler": "simple",
+            "denoise": 1,
+            "model": [
+                "66",
+                0
+            ],
+            "positive": [
+                "6",
+                0
+            ],
+            "negative": [
+                "7",
+                0
+            ],
+            "latent_image": [
+                "72",
+                4
+            ]
+        },
+        "class_type": "KSampler",
+        "_meta": {
+            "title": "K采样器"
+        }
+    },
+    "6": {
+        "inputs": {
+            "text": "Golden medal, showcasing two traditional Chinese scholars with long beards, standing opposite each other in flowing robes with belts. The scholars are framed within a circular border, adorned with laurel leaves on both sides. Above the circle, the phrase \"百家争鸣\" is rendered in the style of calligraphy master 赵孟頫. At the center of the medal, the phrase \"中国传统文化\" is prominently displayed in 王羲之's iconic calligraphy style. The background is solid black, highlighting the metallic sheen and intricate details of the gold medal. The overall composition exudes traditional Chinese artistic aesthetics, with a refined metallic texture.",
+            "speak_and_recognation": {
+                "__value__": [
+                    false,
+                    true
+                ]
+            },
+            "clip": [
+                "38",
+                0
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "CLIP文本编码"
+        }
+    },
+    "7": {
+        "inputs": {
+            "text": "",
+            "speak_and_recognation": {
+                "__value__": [
+                    false,
+                    true
+                ]
+            },
+            "clip": [
+                "38",
+                0
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "CLIP文本编码"
+        }
+    },
+    "8": {
+        "inputs": {
+            "samples": [
+                "3",
+                0
+            ],
+            "vae": [
+                "39",
+                0
+            ]
+        },
+        "class_type": "VAEDecode",
+        "_meta": {
+            "title": "VAE解码"
+        }
+    },
+    "37": {
+        "inputs": {
+            "unet_name": "qwen_image_bf16.safetensors",
+            "weight_dtype": "default"
+        },
+        "class_type": "UNETLoader",
+        "_meta": {
+            "title": "UNet加载器"
+        }
+    },
+    "38": {
+        "inputs": {
+            "clip_name": "qwen_2.5_vl_7b.safetensors",
+            "type": "qwen_image",
+            "device": "default"
+        },
+        "class_type": "CLIPLoader",
+        "_meta": {
+            "title": "加载CLIP"
+        }
+    },
+    "39": {
+        "inputs": {
+            "vae_name": "qwen_image_vae.safetensors"
+        },
+        "class_type": "VAELoader",
+        "_meta": {
+            "title": "加载VAE"
+        }
+    },
+    "66": {
+        "inputs": {
+            "shift": 3.1000000000000005,
+            "model": [
+                "37",
+                0
+            ]
+        },
+        "class_type": "ModelSamplingAuraFlow",
+        "_meta": {
+            "title": "采样算法（AuraFlow）"
+        }
+    },
+    "72": {
+        "inputs": {
+            "width": 1024,
+            "height": 1024,
+            "aspect_ratio": "4:3 landscape 1152x896",
+            "swap_dimensions": "Off",
+            "upscale_factor": 1,
+            "batch_size": 1
+        },
+        "class_type": "CR SDXL Aspect Ratio",
+        "_meta": {
+            "title": "🔳 CR SDXL Aspect Ratio"
+        }
+    },
+    "74": {
+        "inputs": {
+            "images": [
+                "8",
+                0
+            ]
+        },
+        "class_type": "PreviewImage",
+        "_meta": {
+            "title": "预览图像"
+        }
+    }
+}

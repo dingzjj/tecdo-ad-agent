@@ -155,9 +155,9 @@ def call_for_MVAdapter(positive_prompt: str, negative_prompt: str, image_path: s
     """
     调用MVAdapter
     """
-    server_address = conf.get_path("comfyui_server_address")
+    server_address = conf.get_path("comfyui.server_address")
     client_id = str(uuid.uuid4())  # generate client_id
-    workflow_file = conf.get_path("MVAdapter_workflow_json_path")
+    workflow_file = conf.get_path("comfyui.MVAdapter_workflow_json_path")
     prompt = get_workflow(workflow_file)
     prompt = modify_workflow(
         prompt,
