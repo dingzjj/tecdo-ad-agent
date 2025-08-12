@@ -3,7 +3,7 @@ from agent.utils import is_video_file
 from config import logger
 from langchain_core.messages import SystemMessage
 from agent.utils import is_image_file
-from agent.third_part.multimodal_generation_model.kernel import model_factory
+from agent.third_part.multimodel_generation_model.kernel import model_factory
 from pydantic import BaseModel, Field, root_validator
 from agent.ad_agent.prompt import AD_AGENT_SYSTEM_PROMPT_cn
 from langchain_core.messages import HumanMessage
