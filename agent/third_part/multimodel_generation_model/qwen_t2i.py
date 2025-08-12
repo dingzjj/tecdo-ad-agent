@@ -293,8 +293,7 @@ def save_images(server_address: str, outputs: dict, output_dir: str = "./images"
         try:
             image_resp = requests.get(view_url, params=params, timeout=10)
             if image_resp.status_code != 200:
-                raise QwenT2IError(
-                    f"❌ 图片请求失败: 状态码 {image_resp.status_code}")
+                continue
 
             image = Image.open(io.BytesIO(image_resp.content))
 

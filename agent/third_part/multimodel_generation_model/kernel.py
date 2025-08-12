@@ -1,3 +1,6 @@
+from agent.third_part.multimodel_generation_model.sdxl_mv_adapter import run_sdxl_mv_adapter
+from agent.third_part.multimodel_generation_model.wan2_1_t2i import run_wan2_1_t2i
+from agent.third_part.multimodel_generation_model.qwen_t2i import run_qwen_t2i
 from agent.third_part.multimodel_generation_model.gemini2_t2i import run_gemini2_t2i
 from agent.third_part.multimodel_generation_model.gemini2_i2i import run_gemini2_i2i
 from agent.third_part.multimodel_generation_model.veo3 import Veo3
@@ -98,6 +101,7 @@ class Qwen_t2i(MultimodalGenerationModel):
             negative_prompt = ""
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
+        return await run_qwen_t2i(positive_prompt, negative_prompt, conf.get_path("share_material_dir"))
 
 
 class Kling2_1_i2v(MultimodalGenerationModel):
@@ -131,51 +135,7 @@ class Wan2_1_t2i(MultimodalGenerationModel):
             negative_prompt = ""
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-
-
-class Wan2_2_5b_t2v(MultimodalGenerationModel):
-    def __init__(self):
-        self.id = "wan2_2_5b_t2v"
-
-    async def generate(self, **param) -> str:
-        positive_prompt = param["positive_prompt"]
-        if "negative_prompt" in param:
-            negative_prompt = param["negative_prompt"]
-        else:
-            negative_prompt = ""
-        if positive_prompt is None:
-            raise ValueError("positive_prompt不能为空")
-
-
-class Wan2_2_14b_t2v(MultimodalGenerationModel):
-    def __init__(self):
-        self.id = "wan2_2_14b_t2v"
-
-    async def generate(self, **param) -> str:
-        positive_prompt = param["positive_prompt"]
-        if "negative_prompt" in param:
-            negative_prompt = param["negative_prompt"]
-        else:
-            negative_prompt = ""
-        if positive_prompt is None:
-            raise ValueError("positive_prompt不能为空")
-
-
-class Wan2_2_14b_i2v(MultimodalGenerationModel):
-    def __init__(self):
-        self.id = "wan2_2_14b_i2v"
-
-    async def generate(self, **param) -> str:
-        image_path = param["image_path"]
-        positive_prompt = param["positive_prompt"]
-        if "negative_prompt" in param:
-            negative_prompt = param["negative_prompt"]
-        else:
-            negative_prompt = ""
-        if image_path is None:
-            raise ValueError("image_path不能为空")
-        if positive_prompt is None:
-            raise ValueError("positive_prompt不能为空")
+        return await run_wan2_1_t2i(positive_prompt, negative_prompt, output_dir=conf.get_path("share_material_dir"))
 
 
 class Veo3_t2v(MultimodalGenerationModel):
@@ -211,6 +171,24 @@ class Veo3_i2v(MultimodalGenerationModel):
         return await Veo3(output_dir=conf.get_path("share_material_dir")).i2v(image_path, positive_prompt, negative_prompt)
 
 
+class SDXL_MV_Adapter(MultimodalGenerationModel):
+    def __init__(self):
+        self.id = "sdxl_mv_adapter_i2i"
+
+    async def generate(self, **param) -> str:
+        image_path = param["image_path"]
+        positive_prompt = param["positive_prompt"]
+        if "negative_prompt" in param:
+            negative_prompt = param["negative_prompt"]
+        else:
+            negative_prompt = ""
+        if image_path is None:
+            raise ValueError("image_path不能为空")
+        if positive_prompt is None:
+            raise ValueError("positive_prompt不能为空")
+        return await run_sdxl_mv_adapter(param["positive_prompt"], param["negative_prompt"], param["image_path"], conf.get_path("share_material_dir"))
+
+
 class ModelFactory:
     """
     模型工厂
@@ -226,11 +204,9 @@ class ModelFactory:
             "qwen_t2i": Qwen_t2i(),
             "kling2_1_i2v": Kling2_1_i2v(),
             "wan2_1_t2i": Wan2_1_t2i(),
-            "wan2_2_5b_t2v": Wan2_2_5b_t2v(),
-            "wan2_2_14b_t2v": Wan2_2_14b_t2v(),
-            "wan2_2_14b_i2v": Wan2_2_14b_i2v(),
             "veo3_t2v": Veo3_t2v(),
             "veo3_i2v": Veo3_i2v(),
+            "sdxl_mv_adapter_i2i": SDXL_MV_Adapter(),
         }
 
     def get_model_by_id(self, model_id: str) -> MultimodalGenerationModel:
@@ -255,7 +231,8 @@ class ModelFactory:
                     filtered_models.append(model)
 
         models = filtered_models
-        logger.info(f"{specific_function} -> filtered_models:{filtered_models}")
+        logger.info(
+            f"{specific_function} -> filtered_models:{filtered_models}")
         # 将中文转换为英文
         require_en = Translator(from_lang="ZH",
                                 to_lang="EN-US").translate(require)

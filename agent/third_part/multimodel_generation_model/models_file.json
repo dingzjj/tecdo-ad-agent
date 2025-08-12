@@ -24,7 +24,8 @@
             "defect": [
                 "Poor ability to rewrite Chinese characters",
                 "The ability to modify features is relatively weak",
-                "The ability to generate character parts is relatively poor"
+                "The ability to generate character parts is relatively poor",
+                "Poor ability to generate Chinese text"
             ]
         }
     ],
@@ -40,8 +41,49 @@
             "defect": [
                 "Poor ability to modify Chinese characters",
                 "Poor ability to refer to two images",
-                "The number of feature rewriting points should not be excessive. Generally, only 2 to 3 modification points are provided at a time"
+                "The number of feature rewriting points should not be excessive. Generally, only 2 to 3 modification points are provided at a time",
+                "Poor ability to generate Chinese text"
             ]
+        }
+    ],
+    "Wan 2.1": [
+        {
+            "id": "wan2_1_t2i",
+            "application": "text to image",
+            "features": [
+                "Realistic style",
+                "Realism",
+                "Just like the photos presented by the camera"
+            ],
+            "defect": [
+                "Poor ability to generate Chinese text"
+            ]
+        }
+    ],
+    "QWen": [
+        {
+            "id": "qwen_t2i",
+            "application": "text to image",
+            "features": [
+                "It has the strongest ability to generate Chinese text",
+                "The ability to understand Chinese prompt words is the strongest",
+                "It has a certain sense of reality as well as a touch of the 2D style"
+            ],
+            "defect": [
+                "The image generation style is not very close to realism",
+                "Sometimes the text generation is inaccurate"
+            ]
+        }
+    ],
+    "sdxl": [
+        {
+            "id": "sdxl_mv_adapter_i2i",
+            "application": "image to image",
+            "features": [
+                "Generate multi-perspective images",
+                "No prompt words are required"
+            ],
+            "defect": []
         }
     ],
     "KLing 2.1": [
@@ -52,7 +94,20 @@
                 "Strong authenticity",
                 "Suitable for model product display"
             ],
-            "defect": []
+            "defect": [
+                "Silence"
+            ]
+        },
+        {
+            "id": "kling2_1_t2v",
+            "application": "text to video",
+            "features": [
+                "The video has a certain sense of reality",
+                "To a certain extent, it is suitable for the generation of creative advertisements"
+            ],
+            "defect": [
+                "Silence"
+            ]
         }
     ],
     "Veo 3": [
@@ -62,7 +117,8 @@
             "features": [
                 "Suitable for creative advertising",
                 "It has a strong ability to generate fantasy-themed videos",
-                "Fast generation time"
+                "Fast generation time",
+                "Audio video"
             ],
             "defect": [
                 "The style is not very genuine",
@@ -75,10 +131,12 @@
             "features": [
                 "Suitable for creative advertising",
                 "It has a strong ability to generate fantasy-themed videos",
-                "Fast generation time"
+                "Fast generation time",
+                "Audio video"
             ],
             "defect": [
-                "The prompt words need to be specific and clear"
+                "The prompt words need to be specific and clear",
+                "Sometimes, there may be inconsistencies between the reference pictures and the content presented in the video"
             ]
         }
     ]
