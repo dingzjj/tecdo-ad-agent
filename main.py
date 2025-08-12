@@ -613,6 +613,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                     label="素材库",
                     file_types=["image"],
                     type="filepath",
+                    height="100%",
                     interactive=False,
                 )
 

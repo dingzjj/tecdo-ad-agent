@@ -332,8 +332,8 @@ class Veo3(I2VStrategy):
         pass
 
 
-    def __init__(self, project_id: str, location_id: str = "us-central1", 
-                 output_dir: str = "./output", model_id: str = "veo-3.0-generate-preview"):
+    def __init__(self, project_id: str=conf.get("veo3.project_id"), location_id: str = conf.get("veo3.location_id"), 
+                 output_dir: str=conf.get_path("veo3.output_dir"), model_id: str = conf.get("veo3.model_id")):
         name: str = "veo3"
 
         super().__init__(name)

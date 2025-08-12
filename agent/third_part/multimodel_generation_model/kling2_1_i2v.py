@@ -6,9 +6,11 @@ import uuid
 from agent.third_part.aliyunoss import share_file_in_oss
 from agent.exception import CreateVideoError
 from typing import Literal
+import os
+from agent.utils import get_time_id
 
 
-async def run_kling2_1_i2v(img_path: str, positive_prompt: str, negative_prompt: str, duration: Literal[5, 10]):
+async def run_kling2_1_i2v(img_path: str, positive_prompt: str, negative_prompt: str, duration: Literal[5, 10], output_dir: str):
     # 使用keling的api生成视频，最终返回一个url，url是视频的地址
     http_client = httpx.Client(timeout=httpx.Timeout(
         600.0, connect=60.0), follow_redirects=True)
@@ -75,7 +77,13 @@ async def run_kling2_1_i2v(img_path: str, positive_prompt: str, negative_prompt:
             if video_list:
                 url = video_list[0].get("url")
                 if url:
-                    return url
+                    # 将url保存到本地
+                    video_path = os.path.join(
+                        output_dir, f"{get_time_id()}.mp4")
+                    response = http_client.get(url)
+                    with open(video_path, "wb") as f:
+                        f.write(response.content)
+                    return video_path
                 else:
                     logger.error("视频结果为空。")
                     raise CreateVideoError("视频结果为空。")

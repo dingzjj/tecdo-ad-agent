@@ -1,0 +1,85 @@
+{
+    "Gemini 2.0": [
+        {
+            "id": "gemini2_t2i",
+            "application": "text to image",
+            "features": [
+                "Artistic painting",
+                "Nice style",
+                "Cartoon character generation is relatively good"
+            ],
+            "defect": [
+                "The ability to generate character parts is relatively poor",
+                "The sense of reality is not strong"
+            ]
+        },
+        {
+            "id": "gemini2_i2i",
+            "application": "image to image",
+            "features": [
+                "It has the strongest single-image editing ability",
+                "It has a strong ability for dual-image reference and is suitable for rewriting based on dual-image reference",
+                "Strong ability to modify English text"
+            ],
+            "defect": [
+                "Poor ability to rewrite Chinese characters",
+                "The ability to modify features is relatively weak",
+                "The ability to generate character parts is relatively poor"
+            ]
+        }
+    ],
+    "FLUX": [
+        {
+            "id": "flux_i2i",
+            "application": "image to image",
+            "features": [
+                "Strong single-image editing ability",
+                "Seamless connection of dual image fusion",
+                "Strong ability to modify English text"
+            ],
+            "defect": [
+                "Poor ability to modify Chinese characters",
+                "Poor ability to refer to two images",
+                "The number of feature rewriting points should not be excessive. Generally, only 2 to 3 modification points are provided at a time"
+            ]
+        }
+    ],
+    "KLing 2.1": [
+        {
+            "id": "kling2_1_i2v",
+            "application": "image to video",
+            "features": [
+                "Strong authenticity",
+                "Suitable for model product display"
+            ],
+            "defect": []
+        }
+    ],
+    "Veo 3": [
+        {
+            "id": "veo3_t2v",
+            "application": "text to video",
+            "features": [
+                "Suitable for creative advertising",
+                "It has a strong ability to generate fantasy-themed videos",
+                "Fast generation time"
+            ],
+            "defect": [
+                "The style is not very genuine",
+                "The prompt words need to be specific and clear"
+            ]
+        },
+        {
+            "id": "veo3_i2v",
+            "application": "image to video",
+            "features": [
+                "Suitable for creative advertising",
+                "It has a strong ability to generate fantasy-themed videos",
+                "Fast generation time"
+            ],
+            "defect": [
+                "The prompt words need to be specific and clear"
+            ]
+        }
+    ]
+}

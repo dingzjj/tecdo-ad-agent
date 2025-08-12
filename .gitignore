@@ -19,3 +19,4 @@ user_dir
 user_dir/*
 .gradio/*
 runs/*
+material_library/*

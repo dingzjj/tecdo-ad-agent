@@ -19,7 +19,7 @@ def create_pipe(output_images_num):
 async def run_flux_i2i(
     input_image_path: str,
     prompt: str,
-    output_image_dir: str,
+    output_dir: str,
     output_images_num: int = 1,
     guidance_scale: float = 2.5,
 ) -> list:
@@ -29,7 +29,7 @@ async def run_flux_i2i(
     参数:
         input_image_path (str): 输入图像的本地路径（不支持直接传 URL）
         prompt (str): 提示词
-        output_image_dir (str): 输出图像的保存目录
+        output_dir (str): 输出图像的保存目录
         output_images_num (int): 要生成的图像数量
         guidance_scale (float): 指导强度
 
@@ -43,7 +43,7 @@ async def run_flux_i2i(
     # 2. 提取输入图像的文件名（不带扩展名）
     # input_image_name = os.path.splitext(os.path.basename(input_image_path))[0]
     # 3. 确保输出目录存在，否则自动创建
-    os.makedirs(output_image_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
     # 4. 加载模型管道（假设 create_pipe() 已定义）
     pipe = create_pipe(output_images_num)
     # if hasattr(torch, "compile"):
@@ -62,10 +62,10 @@ async def run_flux_i2i(
     output_paths = []
     for i, img in enumerate(images):
         # 构造输出文件名：{输入文件名}_output_{编号}.png
-        output_path = os.path.join(output_image_dir, f"{get_time_id()}.png")
+        output_path = os.path.join(output_dir, f"{get_time_id()}.png")
         img.save(output_path)
         output_paths.append(output_path)
 
     logger.info(
-        f"成功生成 {len(output_paths)} 张图像，已保存至目录: {output_image_dir}")
+        f"成功生成 {len(output_paths)} 张图像，已保存至目录: {output_dir}")
     return output_paths

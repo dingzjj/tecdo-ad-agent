@@ -13,8 +13,8 @@ from typing import Dict, Any, Literal
 
 
 class Veo3:
-    def __init__(self, project_id: str, location_id: str = "us-central1",
-                 output_dir: str = "./output", model: str = "veo-3.0-generate-preview"):
+    def __init__(self, project_id: str = conf.get("veo3.project_id"), location_id: str = conf.get("veo3.location_id"),
+                 output_dir: str = conf.get_path("veo3.output_dir"), model: str = conf.get("veo3.model_id")):
         """
         初始化视频生成器
 

@@ -71,7 +71,6 @@ def step2_submit(user_id,img_v1_gallery_select_box,all_img_v1_list):
         video_prompt = generate_video_prompt(img_v1_path,img_v1["image_prompt"])
         print(f"video_prompt: {video_prompt}")
         generator = Veo3(
-            project_id="ca-biz-vypngh-y97n",  # 项目ID
             output_dir=output_dir   # 视频保存目录
         )
         video_path = generator.generate_video(video_prompt,img_v1_path)

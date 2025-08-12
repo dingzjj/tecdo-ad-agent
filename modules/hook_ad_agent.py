@@ -18,6 +18,7 @@ from langchain_core.messages import AIMessage
 
 from pojo import user_id
 from agent.ad_agent.pojo import gradio_chat_message_list2ad_agent_chat_message_list, AdAgentChatMessage
+from agent.ad_agent.pojo import gradio_chat_message_list2chat_message_list
 
 
 def send_message_to_do_workflow(user_input, chatbot, is_end):
@@ -103,12 +104,14 @@ def send_message_to_do_workflow(user_input, chatbot, is_end):
 def send_message_to_ad_agent(user_id, user_input, chatbot):
     if user_id not in AdAgents:
         AdAgents[user_id] = AdAgent(user_id)
-    chatbot.pop(0)
-    chatbot.pop(0)
     chat_history = gradio_chat_message_list2chat_message_list(chatbot)
+    chat_history.pop(0)
     question = user_input["text"]
     user_files = user_input["files"]
-
+    img_number = 1
+    doc_number = 1
+    video_number = 1
+    other_number = 1
     overhead_information = {}
     for file_path in user_files:
         # 等待上传完毕再往后运行，即等到该文件的大小大于0
@@ -116,7 +119,7 @@ def send_message_to_ad_agent(user_id, user_input, chatbot):
             time.sleep(1)
         # 假如文件是png等等文件结尾的，则将其已img_{number}加入到overhead_information中
         if file_path.endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")):
-            overhead_information[f"img_{img_number}"] = file_path
+            overhead_information[f"image_{img_number}"] = file_path
             img_number += 1
         # 假如文件是pdf等等文件结尾的，则将其已pdf_{number}加入到overhead_information中
         elif file_path.endswith((".pdf", ".docx", ".doc", ".txt", ".md", ".csv", ".xls", ".xlsx", ".json")):

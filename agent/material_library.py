@@ -1,4 +1,6 @@
 # 爬取（堆量)
+from shutil import move
+from agent.mini_agent import AnalyseMaterialAgent
 from typing import Literal
 from translate import Translator
 from config import logger
@@ -18,13 +20,13 @@ from typing import Optional
 from pydantic import BaseModel, Field
 import os
 from config import conf
-
+import shutil
 os.makedirs(conf.get_path("material_library_dir"), exist_ok=True)
 
 # 路径： 素材库地址 + 素材id
 
 # 素材所在Path: 素材库地址 + 素材id
-from agent.mini_agent import AnalyseMaterialAgent
+
 
 class Material(BaseModel):
     """
@@ -35,7 +37,7 @@ class Material(BaseModel):
     以下Path都为相对路径，相对于素材的路径，素材的路径 = 素材库地址 + 素材id
     """
     id: str = Field(description="素材id")
-    link_list: list[str] = Field(description="链接列表")
+    link_list: list[str] = Field(default=[], description="链接列表")
     title: str = Field(description="标题")
     description: str = Field(description="描述")
     sub_material_id: int = Field(default=1, description="next sub_material id")
@@ -57,16 +59,30 @@ class Material(BaseModel):
         img_dir = os.path.join(conf.get_path(
             "material_library_dir"), self.id, "images")
         os.makedirs(img_dir, exist_ok=True)
-        # 对sub_material_path_list中的sub_material进行分析
+        # 并行分析素材
+        tasks = []
         for sub_material_id, sub_material_path in self.sub_material_path_list.items():
-            # 1. 通过链接获取图片
-            # 2. 对图片进行分析
-            analysis_result = AnalyseMaterialAgent().analyse_material(
-                product=self.title, material_path=sub_material_path, source="local")
-            # 3. 将分析结果保存到self.sub_material_path_list中
+            tasks.append((
+                sub_material_id,
+                sub_material_path,
+                asyncio.create_task(
+                    AnalyseMaterialAgent().analyse_material(
+                        product=self.title,
+                        material_path=sub_material_path,
+                        source="local"
+                    )
+                )
+            ))
+
+        # 等待所有分析完成
+        results = await asyncio.gather(*(t[2] for t in tasks))
+
+        # 保存结果
+        for (sub_material_id, sub_material_path, _), analysis_result in zip(tasks, results):
             self.sub_material_content_list[sub_material_id] = (
-                sub_material_path, analysis_result)
-            # 删除sub_material_path_list中该元素
+                sub_material_path, analysis_result
+            )
+        # 清空
         self.sub_material_path_list = {}
 
     async def get_material_by_id(self, sub_material_id: int):
@@ -97,7 +113,10 @@ class MaterialLibrary(BaseModel):
 
     def get_all_material_info(self):
         # 返回Json[str格式] - 为llm提供素材库信息
-        return json.dumps(self.material_list)
+        return json.dumps(
+            {k: v.model_dump() for k, v in self.material_list.items()},
+            ensure_ascii=False
+        )
 
     def get_material_by_id(self, id: str):
         """
@@ -108,7 +127,9 @@ class MaterialLibrary(BaseModel):
         id_list = id.split("_")
         material_id = id_list[0]
         sub_material_id = id_list[1]
-        return self.material_list[material_id].get_material_by_id(int(sub_material_id))
+        sub_material_path = asyncio.run(
+            self.material_list[material_id].get_material_by_id(int(sub_material_id)))
+        return os.path.join(self.material_library_dir, material_id, sub_material_path)
 
     def append_material(self, material: Material):
         """
@@ -116,10 +137,39 @@ class MaterialLibrary(BaseModel):
         :param material: 素材
         """
         self.material_list[material.id] = material
+        logger.info(f"append material: {material}")
 
-    def insert_material_with_one_sub_material(self, title, description, sub_material_path: str):
-        self.append_material(Material(id=self.get_id(), title=title,
-                                      description=description, sub_material_content_list={1: (sub_material_path, description)}))
+    def insert_material_with_one_sub_material_to_v2(self, title, description, sub_material_path: str):
+        """上传到的是v2部分"""
+        material_id = self.get_id()
+        # 创建素材目录
+        os.makedirs(os.path.join(self.material_library_dir,
+                    str(material_id)), exist_ok=True)
+        # 将sub_material_path移动到素材目录
+        new_sub_material_path = os.path.join(
+            self.material_library_dir, str(material_id), f"{material_id}_1.{sub_material_path.split('.')[-1]}")
+
+        shutil.move(sub_material_path, new_sub_material_path)
+
+        self.append_material(Material(id=str(material_id), title=title,
+                                      description=description, sub_material_id=2, sub_material_content_list={1: (f"{material_id}_1.{sub_material_path.split('.')[-1]}", description)}))
+
+    def insert_material_with_one_sub_material_to_v1(self, title, description, sub_material_path: str):
+        """上传到的是v1部分"""
+        material_id = self.get_id()
+        # 创建素材目录
+        os.makedirs(os.path.join(self.material_library_dir,
+                    str(material_id)), exist_ok=True)
+        # 将sub_material_path移动到素材目录
+        new_sub_material_path = os.path.join(
+            self.material_library_dir, str(material_id), f"{material_id}_1.{sub_material_path.split('.')[-1]}")
+        shutil.move(sub_material_path, new_sub_material_path)
+        self.append_material(Material(id=str(material_id), title=title,
+                                      description=description, sub_material_id=1, sub_material_path_list={1: f"{material_id}_1.{sub_material_path.split('.')[-1]}"}))
+
+    def get_material_id(self, sub_material_path: str):
+        """获取素材id"""
+        return sub_material_path.split('/')[-1].split('.')[0]
 
     def select_appropriate_material(self, require: str) -> list[str]:
         """
@@ -127,10 +177,10 @@ class MaterialLibrary(BaseModel):
         :param require: 需求
         :return: 素材
         """
-        # 先对所有素材进行分析(并行运行)
-        tasks = [material.analyze_material()
-                 for material in self.material_list.values()]
-        asyncio.run(asyncio.gather(*tasks))
+        # 先对所有素材进行分析(并行运行),对没有分析过的素材进行分析
+        for material in self.material_list.values():
+            asyncio.run(material.analyze_material())
+
         material_library = self.get_all_material_info()
         gemini_generative_model = get_gemini_multimodal_model(
             SELECT_APPROPRIATE_MATERIAL_SYSTEM_PROMPT_en.format(
@@ -145,17 +195,75 @@ class MaterialLibrary(BaseModel):
 
         return content["material_id_list"]
 
-    def crawl_material(self, keyword: str):
+    async def crawl_material_by_link(self, link: str):
         """
-        爬取素材
-        :param keyword: 商品关键词
-        :param start_mid: 开始素材id
+        根据链接获取素材
+        :param link: 链接
         :return: 素材
         """
-        material_list = asyncio.run(
-            self.crawl_material_in_web(keyword))
-        for material in material_list:
-            self.append_material(material)
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+                locale="en-US"
+            )
+            page = await context.new_page()
+            try:
+                await page.goto(link, timeout=10000)
+                await asyncio.sleep(2)
+                try:
+                    await page.wait_for_selector("a#redir-stay-at-www", timeout=1000)
+                    await page.click("a#redir-stay-at-www")
+                    print("已点击 Stay on Amazon.sg 按钮")
+                except:
+                    print("按钮不存在，继续执行")
+                title = await page.title()
+
+                thumbs = await page.locator("li.imageThumbnail").all()
+                for thumb in thumbs:
+                    await thumb.click()
+                    await asyncio.sleep(0.5)
+
+                main_images = await page.locator("img.a-dynamic-image").all()
+                img_list = []
+                for img in main_images:
+                    src = await img.get_attribute("data-old-hires")
+                    if src and src not in img_list:
+                        img_list.append(src)
+                if len(img_list) > 0:
+                    # 将图片下载到本地
+                    img_path_dict = {}
+                    material_id = self.get_id()
+                    os.makedirs(os.path.join(self.material_library_dir, str(
+                        material_id)), exist_ok=True)
+                    for i, img in enumerate(img_list):
+                        img_path = os.path.join(self.material_library_dir, str(
+                            material_id), f"{str(material_id)}_{i+1}.jpg")
+                        response = requests.get(img)
+
+                        with open(img_path, "wb") as f:
+                            f.write(response.content)
+                        img_path_dict[i+1] = f"{str(material_id)}_{i+1}.jpg"
+                    material = Material(
+                        id=str(material_id),
+                        link_list=[link],
+                        title=title,
+                        description=f"Amazon material for '{title}'",
+                        sub_material_path_list=img_path_dict,
+                        sub_material_content_list={}
+                    )
+                    self.append_material(material)
+                    await material.analyze_material()
+                else:
+                    content = await page.content()
+                    logger.info(content[:2000])
+                    logger.info(f"No images found for {link}")
+            except Exception as e:
+                logger.error(f"Error processing link {link}: {e}")
+        await browser.close()
+        if img_list and len(img_list) > 0:
+            return True
+        return False
 
     def return_material_list(self):
         """
@@ -176,7 +284,7 @@ class MaterialLibrary(BaseModel):
             material_list.extend([(os.path.join(self.material_library_dir, material_id, sub_material_path), str(f"{material_id}_{sub_material_id}"))
                                  for sub_material_id, sub_material_path in material.sub_material_path_list.items()])
             material_list.extend([(os.path.join(self.material_library_dir, material_id, sub_material_path), str(f"{material_id}_{sub_material_id}"))
-                                 for sub_material_id, sub_material_path, _ in material.sub_material_content_list.items()])
+                                 for sub_material_id, (sub_material_path, _) in material.sub_material_content_list.items()])
         return material_list
 
     async def crawl_material_in_web(self, keyword: str) -> list[Material]:
@@ -185,19 +293,16 @@ class MaterialLibrary(BaseModel):
         :param keyword: 商品关键词
         :return: Material
         """
-        material_list = []
-        aws_material_list = await self.crawl_material_in_aws(keyword)
-        material_list.extend(aws_material_list)
-        return material_list
+        await self.crawl_material_in_aws(keyword)
 
-    async def crawl_material_in_aws(self, keyword: str, max_link_num: int = 5) -> list[Material]:
+    async def crawl_material_in_aws(self, keyword: str, max_link_num: int = 10) -> list[Material]:
         """
         爬取商品链接
         :param keyword: 商品关键词
         :return: Material
         """
         # 将keyword翻译为英文
-        keyword = Translator(from_lang="Chinese", to_lang="English").translate(
+        keyword = Translator(from_lang="ZH", to_lang="EN-US").translate(
             keyword)
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
@@ -230,7 +335,6 @@ class MaterialLibrary(BaseModel):
                     goods_links.append("https://www.amazon.com" + href)
 
             # print("Step 5: Process each goods link")
-            materials = []
             for i, link in enumerate(goods_links, start=1):
                 if i > max_link_num:
                     break
@@ -262,7 +366,8 @@ class MaterialLibrary(BaseModel):
                         continue
 
                 main_images = await page.locator("img.a-dynamic-image").all()
-                logger.info(f"主图数量: {len(main_images)}")
+                logger.info(f"number of images(crawl from amazon): {
+                            len(main_images)}")
                 img_list = []
                 for img in main_images:
                     src = await img.get_attribute("data-old-hires")
@@ -291,12 +396,10 @@ class MaterialLibrary(BaseModel):
                         sub_material_path_list=img_path_dict,
                         sub_material_content_list={}
                     )
-                    materials.append(material)
+                    self.append_material(material)
                 else:
                     content = await page.content()
                     logger.info(content[:2000])
                     logger.info(f"No images found for {link}")
 
-            logger.info(f"Finished collecting {len(materials)} materials.")
             await browser.close()
-            return materials

@@ -36,7 +36,7 @@ def gradio_chat_message2ad_agent_chat_message(gradio_chat_message: gr.ChatMessag
 def gradio_chat_message2chat_message(gradio_chat_message: gr.ChatMessage):
     # 目前只转换text类型的消息
     content = gradio_chat_message["content"]
-    if isinstance(content, str):
+    if not isinstance(content, str):
         return None
     if gradio_chat_message["role"] == "user":
         return HumanMessage(content=content)

@@ -144,7 +144,7 @@ class AnalyseImageAgent:
 
 class AnalyseMaterialAgent:
 
-    def analyse_material(self, product: str, material_path: str, source: Literal["web", "local"]) -> str:
+    async def analyse_material(self, product: str, material_path: str, source: Literal["web", "local"]) -> str:
 
         if source == "web":
             response = requests.get(material_path)
