@@ -1,4 +1,6 @@
-from agent.mini_agent import get_time_id
+from agent.exception import SDXL_MV_AdapterError
+from agent.utils import get_time_id
+from config import logger
 from config import conf
 import requests
 import uuid
@@ -12,24 +14,24 @@ from requests import RequestException
 from typing import Optional
 import asyncio
 import subprocess
-from config import logger
-
+SERVER_IP = conf.get("comfyui.server_ip")
 SERVER_USER = "root"
 REMOTE_DIR = "/data/aigc/qws/ComfyUI/input_images/"  # 远程服务器存储图片地址
 WORKFILE_PATH = conf.get_path(
     "comfyui.MVAdapter_workflow_json_path")  # 工作流文件路径
+SERVER_ADDRESS = conf.get("comfyui.server_address")
 
 
 async def run_sdxl_mv_adapter_i2i(
-    img_path: str,
     positive_prompt: str = "",
     negative_prompt: Optional[str] = "",
     width: int = 768,
     height: int = 768,
-    num_views: int = 6,
+    num_views: int = 4,
     steps: Optional[int] = 50,
     cfg: Optional[float] = 3.0,
-    output_image_dir: str = ""
+    input_image_path: str = "",
+    output_image_dir: str = "",
 ):
     """
     运行 sdxl 多视角生成模型
@@ -42,46 +44,37 @@ async def run_sdxl_mv_adapter_i2i(
         new_num_views (int): 新的生成视角的数量。 Defaults to 6.
         new_steps (int): 新的降噪步数。 Defaults to 25.
         new_cfg (int): 新的CFG值，控制随机性和提示词服从性，值过高会导致质量下降。 Defaults to 3.0.
-        input_image_dir (str): 输入存储图片目录的绝对路径
+        input_image_path (str): 输入图片的绝对路径
         output_image_dir (str): 输出图片的目录
     """
-    SERVER_ADDRESS = conf.get("comfyui.server_address")
     # 生成客户端唯一 ID
     CLIENT_ID = str(uuid.uuid4())
 
     # 上传图片到服务器上：
-    new_input_images_dir = upload_images(input_image_dir)
+    new_input_image_path = upload_image(input_image_path)
 
     # 加载工作流
     workflow = get_workflow(WORKFILE_PATH)
-    image_extensions = (
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".bmp",
-        ".gif",
-        ".webp",
-    )  # 支持的图片格式
-    for filename in os.listdir(input_image_dir):
-        if filename.lower().endswith(image_extensions):
-            input_image = os.path.join(new_input_images_dir, filename)
-            # 修改工作流
-            new_workflow = modify_workflow(
-                workflow,
-                new_positive_prompt=positive_prompt,
-                new_negative_prompt=negative_prompt,
-                new_width=width,
-                new_height=height,
-                new_num_views=num_views,
-                new_steps=steps,
-                new_cfg=cfg,
-                new_image=input_image,
-            )
-            # 运行
-            prompt_id = post_job(SERVER_ADDRESS, CLIENT_ID, new_workflow)
-            output_images = get_images(SERVER_ADDRESS, prompt_id)
-            # 存储
-            return save_images(SERVER_ADDRESS, output_images, output_image_dir)
+
+    # 修改工作流
+    new_workflow = modify_workflow(
+        workflow,
+        new_positive_prompt=positive_prompt,
+        new_negative_prompt=negative_prompt,
+        new_width=width,
+        new_height=height,
+        new_num_views=num_views,
+        new_steps=steps,
+        new_cfg=cfg,
+        new_image_path=new_input_image_path,
+    )
+
+    # 运行
+    prompt_id = post_job(SERVER_ADDRESS, CLIENT_ID, new_workflow)
+    output_images = get_images(SERVER_ADDRESS, prompt_id)
+
+    # 存储
+    return save_images(SERVER_ADDRESS, output_images, output_image_dir)
 
 
 def get_workflow(workflow_file: str) -> dict:
@@ -95,7 +88,6 @@ def get_workflow(workflow_file: str) -> dict:
     try:
         with open(workflow_file, "r") as f:
             content = json.load(f)
-            print(f"🔍 Loading prompt: {workflow_file}")
         return content
     except Exception as e:
         raise FileNotFoundError(f"❌ Couldn't found the file: {workflow_file}")
@@ -110,7 +102,7 @@ def modify_workflow(
     new_num_views: int = 6,
     new_steps: Optional[int] = 50,
     new_cfg: Optional[float] = 3.0,
-    new_image: str = "",
+    new_image_path: str = "",
 ) -> dict:
     """
     根据用户的需求修改工作流中的内容
@@ -123,7 +115,7 @@ def modify_workflow(
         new_num_views (int): 新的生成视角的数量。 Defaults to 6.
         new_steps (int): 新的降噪步数。 Defaults to 25.
         new_cfg (int): 新的CFG值，控制随机性和提示词服从性，值过高会导致质量下降。 Defaults to 3.0.
-        new_image (str): 新的图像路径
+        new_image_path (str): 新的图像路径
     Returns:
         dict: 新的工作流内容
     """
@@ -138,6 +130,7 @@ def modify_workflow(
         workflow["6"]["inputs"]["negative_prompt"] = new_negative_prompt
     else:
         raise ValueError("❌ 检测到6号节点不包含文本，无法修改。")
+
     # 修改生成图像长宽
     if (
         "8" in workflow
@@ -149,6 +142,7 @@ def modify_workflow(
         workflow["8"]["inputs"]["height"] = new_height
     else:
         raise ValueError("❌ 检测到8号节点不包含高宽比设置，无法修改。")
+
     # 修改视角数量
     if (
         "4" in workflow
@@ -158,6 +152,7 @@ def modify_workflow(
         workflow["4"]["inputs"]["num_views"] = new_num_views
     else:
         raise ValueError("❌ 检测到4号节点不包含视角数量设置，无法修改。")
+
     # 修改采样器内容
     if (
         "6" in workflow
@@ -165,21 +160,29 @@ def modify_workflow(
         and "seed" in workflow["6"]["inputs"]
         and "steps" in workflow["6"]["inputs"]
         and "cfg" in workflow["6"]["inputs"]
+        and "num_views" in workflow["6"]["inputs"]
+        and "width" in workflow["6"]["inputs"]
+        and "height" in workflow["6"]["inputs"]
     ):
         # 修改随机种子
         new_seed = random.randint(0, 2**64 - 1)
         workflow["6"]["inputs"]["seed"] = new_seed
         workflow["6"]["inputs"]["steps"] = new_steps
         workflow["6"]["inputs"]["cfg"] = new_cfg
+        workflow["6"]["inputs"]["num_views"] = new_num_views
+        workflow["6"]["inputs"]["width"] = new_width
+        workflow["6"]["inputs"]["height"] = new_height
+        workflow["6"]["inputs"]["height"] = new_height
     else:
         raise ValueError("❌ 检测到6号节点不包含采样器设置，无法修改。")
+
     # 修改输入图片路径
     if (
         "7" in workflow
         and "inputs" in workflow["7"]
         and "image" in workflow["7"]["inputs"]
     ):
-        workflow["7"]["inputs"]["image"] = new_image
+        workflow["7"]["inputs"]["image"] = new_image_path
     else:
         raise ValueError("❌ 检测到7号节点不包含输入图片路径设置，无法修改。")
     return workflow
@@ -194,7 +197,6 @@ def get_images(server_address: str, prompt_id: str) -> str:
     Returns:
         str: 生成的图片路径
     """
-    print("⏳ 等待执行完成...")
     try:
         while True:
             history_resp = requests.get(
@@ -247,11 +249,11 @@ def save_images(server_address: str, outputs: dict, output_dir: str = "./images"
     """
     os.makedirs(output_dir, exist_ok=True)
     if "11" not in outputs:
-        return
+        raise SDXL_MV_AdapterError("11号节点无图像数据")
     node_output = outputs["11"]
     images = node_output.get("images", [])
     if not images:
-        return
+        raise SDXL_MV_AdapterError("11号节点无图像数据")
     # 下载图片
     for image_info in images:
         params = {
@@ -275,14 +277,9 @@ def save_images(server_address: str, outputs: dict, output_dir: str = "./images"
             if ext in [".jpg", ".jpeg"] and image.mode == "RGBA":
                 image = image.convert("RGB")
             # 生成随机文件名并检查是否存在
-            while True:
-                random_filename = f"{get_time_id()}{ext}"
-                output_path = os.path.join(output_dir, random_filename)
-                if not os.path.exists(output_path):
-                    break  # 找到一个唯一的文件名，退出循环
+            output_path = os.path.join(output_dir, f"{get_time_id()}{ext}")
             # 保存图片
             image.save(output_path)
-            logger.info(f"💾 已保存图片: {output_path}")
             return output_path
         except Exception as e:
             logger.error(f"❌ 图片解码失败: {params}")
@@ -290,20 +287,20 @@ def save_images(server_address: str, outputs: dict, output_dir: str = "./images"
             logger.error(e)
 
 
-def upload_images(local_input_images_dir: str = "") -> str:
+def upload_image(local_input_image_path: str = "") -> str:
     """
     上传本地图片到指定服务器上
     Args:
-        local_input_images_dir(str): 本地图片文件存储目录的绝对路径
+        local_input_image_path(str): 本地图片文件存储的绝对路径
 
     Returns:
         str: 图片存放路径
     """
-    if not os.path.isdir(local_input_images_dir):
-        raise FileNotFoundError(f"本地目录不存在: {local_input_images_dir}")
+    if not os.path.isfile(local_input_image_path):
+        raise FileNotFoundError(f"本地图片不存在: {local_input_image_path}")
 
-    # 获取本地目录名
-    dir_name = os.path.basename(os.path.normpath(local_input_images_dir))
+    # 获取图片名称
+    image_name = os.path.basename(os.path.normpath(local_input_image_path))
 
     try:
         cmd = [
@@ -311,13 +308,13 @@ def upload_images(local_input_images_dir: str = "") -> str:
             "-i",
             "/root/.ssh/id_rsa",
             "-r",
-            local_input_images_dir,
-            f"{SERVER_USER}@{conf.get("comfyui.server_address")}",
+            local_input_image_path,
+            f"{SERVER_USER}@{SERVER_IP}:{REMOTE_DIR}",
         ]
         subprocess.run(cmd, check=True)
 
         # 返回远程目录完整路径
-        remote_full_path = os.path.join(REMOTE_DIR, dir_name)
+        remote_full_path = os.path.join(REMOTE_DIR, image_name)
         return remote_full_path
     except Exception as e:
         raise RuntimeError(f"❌ 上传失败: {e}")
@@ -329,12 +326,10 @@ if __name__ == "__main__":
     negative_prompt = (
         """watermark, ugly, deformed, noisy, blurry, low contrast"""  # 负面提示词
     )
-    width, height = 768, 768  # 图像宽高
-    input_image_path = (
-        "/data/qws/Call_for_ComfyUI/input_images"  # 输入本地图片存储的绝对路径
-    )
+    width, height = 1024, 1024  # 图像宽高
+    input_image_path = "/data/qws/Call_for_ComfyUI/input_images/5838f0a4-7e70-4b7f-bf44-cece5981852d.png"  # 输入本地图片存储的绝对路径
     output_image_dir = "./images"  # 输出文件夹
-    num_views = 6  # 生成视角数量
+    num_views = 4  # 生成视角数量
 
     # 可选填参数
     steps = 50  # 降噪步数
@@ -349,7 +344,7 @@ if __name__ == "__main__":
             num_views=num_views,
             steps=steps,
             cfg=cfg,
-            input_image_dir=input_image_path,
+            input_image_path=input_image_path,
             output_image_dir=output_image_dir,
         )
     )

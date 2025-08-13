@@ -64,7 +64,7 @@
     "6": {
         "inputs": {
             "num_views": 6,
-            "prompt": "A decorative figurine of a young anime-style girl",
+            "prompt": "3d style, A decorative figurine of a young anime-style girl",
             "negative_prompt": "watermark, ugly, deformed, noisy, blurry, low contrast",
             "width": 768,
             "height": 768,
@@ -79,7 +79,7 @@
                 ]
             },
             "pipeline": [
-                "4",
+                "12",
                 0
             ],
             "reference_image": [
@@ -150,6 +150,22 @@
         "class_type": "PreviewImage",
         "_meta": {
             "title": "预览图像"
+        }
+    },
+    "12": {
+        "inputs": {
+            "lora_name": "3d_render_style_xl.safetensors",
+            "strength_model": 1,
+            "enable": true,
+            "last_lora_node": true,
+            "pipeline": [
+                "4",
+                0
+            ]
+        },
+        "class_type": "CustomLoraModelLoader",
+        "_meta": {
+            "title": "Custom Lora Model Loader"
         }
     }
 }

@@ -26,9 +26,9 @@ async def run_kling2_1_i2v(img_path: str, positive_prompt: str, negative_prompt:
     # 使用keling的api生成视频，最终返回一个url，url是视频的地址
     http_client = httpx.Client(timeout=httpx.Timeout(
         600.0, connect=60.0), follow_redirects=True)
-    KLING_API_KEY = conf.get("KLING_API_KEY")
-    KLING_SECRET = conf.get("KLING_SECRET")
-    KLING_API_BASE_URL = conf.get("KLING_API_BASE_URL")
+    KLING_API_KEY = conf.get("kling.api_key")
+    KLING_SECRET = conf.get("kling.secret")
+    KLING_API_BASE_URL = conf.get("kling.api_base_url")
     image_url = share_file_in_oss(img_path, f"{uuid.uuid4()}.jpg")
     payload = {
         # kling-v1, kling-v1-5, kling-v1-6, kling-v2-master, kling-v2-1, kling-v2-1-master

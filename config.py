@@ -207,11 +207,6 @@ class Config:
             错误信息列表
         """
         errors = []
-
-        # 检查必需的配置项
-        if not self.get("openai_api_key"):
-            errors.append("OpenAI API Key 未设置")
-
         # 检查端口号范围
         port = self.get("server_port", 7860)
         if not isinstance(port, int) or port < 1 or port > 65535:

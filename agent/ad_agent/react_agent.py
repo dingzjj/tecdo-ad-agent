@@ -210,9 +210,8 @@ def pre_review_material_in_user_input(overhead_information: Annotated[str, Field
             screenshot = ""
             result = process_media(
                 media_file=video_path,
-                MEDIASHIELD_GEMINI_API_KEY=conf.get(
-                    "MEDIASHIELD_GEMINI_API_KEY"),
-                MEDIASHIELD_GPT_API_KEY=conf.get("MEDIASHIELD_GPT_API_KEY"),
+                gemini_api_key=conf.get("mediashield.gemini_api_key"),
+                gpt_api_key=conf.get("mediashield.gpt_api_key"),
                 similarity_threshold=0.4,
                 text_input=text_input,
                 screenshot=screenshot

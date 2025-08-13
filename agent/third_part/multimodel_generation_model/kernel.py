@@ -1,4 +1,4 @@
-from agent.third_part.multimodel_generation_model.sdxl_mv_adapter import run_sdxl_mv_adapter_i2i
+from agent.third_part.multimodel_generation_model.sdxl_mv_adapter_i2i import run_sdxl_mv_adapter_i2i
 from agent.third_part.multimodel_generation_model.wan2_1_t2i import run_wan2_1_t2i
 from agent.third_part.multimodel_generation_model.qwen_t2i import run_qwen_t2i
 from agent.third_part.multimodel_generation_model.gemini2_t2i import run_gemini2_t2i
