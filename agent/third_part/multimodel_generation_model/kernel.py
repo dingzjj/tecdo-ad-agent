@@ -1,4 +1,4 @@
-from agent.third_part.multimodel_generation_model.sdxl_mv_adapter import run_sdxl_mv_adapter
+from agent.third_part.multimodel_generation_model.sdxl_mv_adapter import run_sdxl_mv_adapter_i2i
 from agent.third_part.multimodel_generation_model.wan2_1_t2i import run_wan2_1_t2i
 from agent.third_part.multimodel_generation_model.qwen_t2i import run_qwen_t2i
 from agent.third_part.multimodel_generation_model.gemini2_t2i import run_gemini2_t2i
@@ -100,7 +100,7 @@ class Qwen_t2i(MultimodalGenerationModel):
             negative_prompt = ""
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-        return await run_qwen_t2i(positive_prompt, negative_prompt, conf.get_path("share_material_dir"), is_optimize_prompt_words=True)
+        return await run_qwen_t2i(positive_prompt=positive_prompt, negative_prompt=negative_prompt, output_dir=conf.get_path("share_material_dir"), is_optimize_prompt_words=True)
 
 
 class Kling2_1_i2v(MultimodalGenerationModel):
@@ -188,7 +188,7 @@ class SDXL_MV_Adapter(MultimodalGenerationModel):
             raise ValueError("image_path不能为空")
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-        return await run_sdxl_mv_adapter(param["positive_prompt"], param["negative_prompt"], param["image_path"], conf.get_path("share_material_dir"))
+        return await run_sdxl_mv_adapter_i2i(param["image_path"], param["positive_prompt"], param["negative_prompt"], output_image_dir=conf.get_path("share_material_dir"))
 
 
 class ModelFactory:
