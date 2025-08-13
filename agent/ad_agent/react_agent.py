@@ -1,48 +1,36 @@
 # 采用reAct框架 不断的调工具 - 直到得出结果（需要工具输出的src比较完善）
-from agent.mini_agent import TranslatorAgent
-from agent.mini_agent import GenerateVideoPromptAgent
-import json
-from typing import Dict
-from typing import Annotated, List
-from pydantic.v1 import tools
-from agent.utils import is_video_file
-from config import logger
-from langchain_core.messages import SystemMessage
-from agent.utils import is_image_file
-from agent.third_part.multimodel_generation_model.kernel import model_factory
-from pydantic import BaseModel, Field, root_validator
-from agent.ad_agent.prompt import AD_AGENT_SYSTEM_PROMPT_cn
-from langchain_core.messages import HumanMessage
-from agent.ad_agent.prompt import AD_AGENT_HUMAN_PROMPT_cn
-from agent.material_library import Material
-from agent.material_library import MaterialLibrary
-from agent.utils import get_time_id
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import StateGraph, START, END
-from agent.ad_agent.prompt import REACT_AGENT_SYSTEM_PROMPT_cn
-from agent.llm import create_azure_llm
-from agent.mini_agent import AnalyseImageAgent
-from agent.ad_agent.m2v_workflow import VideoFragment
-from agent.utils import get_url_data
-from agent.third_part.i2v import i2v_strategy_chain
-import uuid
-from MediaShield.process import process_media
-from agent.ad_agent.utils import get_absolute_path_from_user_dir
-from langgraph.prebuilt import create_react_agent
-from langchain_core.tools import tool
-import os
 import asyncio
-from agent.llm import create_azure_gpt5_llm
-# first 创建用户文件夹
-from pydantic import BaseModel
-from pydantic import Field
-from langchain_core.messages import BaseMessage
-from config import conf
+import json
+import os
+import uuid
+from typing import Annotated, Dict, List
 
-from agent.ad_agent.m2v_workflow import get_m2v_workflow
-from agent.ad_agent.m2v_workflow import GenerateVideoState
-from langchain_core.runnables import RunnableConfig
-from agent.utils import create_dir
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.tools import tool
+from langgraph.prebuilt import create_react_agent
+from pydantic import BaseModel, Field, root_validator
+from pydantic.v1 import tools
+
+from MediaShield.process import process_media
+from agent.ad_agent.prompt import (
+    AD_AGENT_HUMAN_PROMPT_cn,
+    AD_AGENT_SYSTEM_PROMPT_cn,
+    REACT_AGENT_SYSTEM_PROMPT_cn,
+)
+from agent.llm import create_azure_gpt5_llm
+from agent.material_library import MaterialLibrary
+from agent.mini_agent import (
+    GenerateVideoPromptAgent,
+    TranslatorAgent,
+)
+from agent.third_part.multimodel_generation_model.kernel import model_factory
+from agent.utils import (
+    is_image_file,
+    is_video_file,
+)
+from config import conf, logger
+
+# 设置环境变量
 os.environ["LANGSMITH_API_KEY"] = "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"
 os.environ["LANGSMITH_TRACING"] = "true"  # Enables LangSmith tracing
 # Project name for organizing LangSmith traces
@@ -50,6 +38,12 @@ os.environ["LANGSMITH_PROJECT"] = "react_agent"
 
 # 所有图片都在
 start_hint = "ad agent"
+
+
+# TODO 创作能力总结 -> 多图创作能力，多视频创作能力，文+图+视频混合创作能力
+# TODO 根据用户选择的图片生成商品lora model，并使用该lora model进行创作
+# TODO 提高agent使用素材库的能力 （所有未指定的生成都先查看素材库判断是否有合适的素材）
+# TODO 多跳能力优化
 
 
 class AdAgentState(BaseModel):
@@ -72,11 +66,6 @@ class AdAgentState(BaseModel):
             values['material_library'] = MaterialLibrary(
                 material_library_dir=material_library_dir)
         return values
-
-# TODO 创作能力总结 -> 多图创作能力，多视频创作能力，文+图+视频混合创作能力
-# TODO 根据用户选择的图片生成商品lora model，并使用该lora model进行创作
-# TODO 提高agent使用素材库的能力 （所有未指定的生成都先查看素材库判断是否有合适的素材）
-# TODO 多跳能力优化
 
 
 class AdAgent:
@@ -427,6 +416,7 @@ def create_image_by_i2i_wo_assign(user_id: Annotated[str, Field(description="用
                                   overhead_information: Annotated[str, Field(description="""额外信息,用于记录用户输入的图片，文档，文件,json格式,例如：{"image_1": "/data/dzj/ad_agent/temp/phone/phone.jpg", "image_2": "/data/dzj/ad_agent/temp/phone/phone.jpg"}""")]):
     """
     用户没有指定图片或者用户希望根据其在附加输入中输入的图片来生成图片，使用image-to-image模型创建图片
+    功能：1.生成某商品的多视角图片 2.对商品图片背景进行修改
     """
     # 一切在工具内的都为英文
     positive_prompt = TranslatorAgent().translate(
@@ -481,7 +471,8 @@ def create_image_by_i2i_with_assign(user_id: Annotated[str, Field(description="�
                                     negative_prompt: Annotated[str, Field(description="负向提示词，例如：不要有文字")],
                                     material_id: Annotated[str, Field(description="素材id,素材id的格式为{number}_{number}，例如1_1")]):
     """
-    用户指定了图片，使用image-to-image模型创建图片
+    用户指定了使用素材库中的图片来生成图片，使用image-to-image模型创建图片
+    功能：1.生成某商品的多视角图片 2.对商品图片背景进行修改
     """
     # 一切在工具内的都为英文
     positive_prompt = TranslatorAgent().translate(
