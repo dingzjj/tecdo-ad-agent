@@ -49,7 +49,7 @@ class Material(BaseModel):
     sub_material_content_list: dict[int, tuple[str, str]] = Field(
         default={}, description="id:sub_material链接(in local),material内容")
 
-    async def analyze_material(self):
+    async def analyze_material(self, material_library_dir: str):
         """
         分析素材,对素材中的内容进行分析（主要是图片部分）
         :param material: 素材
@@ -65,7 +65,7 @@ class Material(BaseModel):
                     AnalyseMaterialAgent().analyse_material(
                         product=self.title,
                         material_path=os.path.join(
-                            conf.get_path("material_library_dir"), self.id, sub_material_path),
+                            material_library_dir, self.id, sub_material_path),
                         source="local"
                     )
                 )
@@ -110,10 +110,12 @@ class MaterialLibrary(BaseModel):
 
     def get_all_material_info(self):
         # 返回Json[str格式] - 为llm提供素材库信息
-        return json.dumps(
-            {k: v.model_dump() for k, v in self.material_list.items()},
-            ensure_ascii=False
-        )
+        all_material_info = {}
+        for material_id, material in self.material_list.items():
+            for sub_material_id, (sub_material_path, sub_material_content) in material.sub_material_content_list.items():
+                all_material_info[f"{material_id}_{
+                    sub_material_id}"] = sub_material_content
+        return json.dumps(all_material_info, ensure_ascii=False)
 
     def get_material_by_id(self, id: str):
         """
@@ -135,6 +137,23 @@ class MaterialLibrary(BaseModel):
         """
         self.material_list[material.id] = material
         logger.info(f"append material: {material}")
+
+    def insert_material_with_sub_material_list_to_v2(self, title, description, sub_material_path_list: list[str]):
+        """上传到的是v2部分"""
+        material_id = self.get_id()
+        # 创建素材目录
+        os.makedirs(os.path.join(self.material_library_dir,
+                    str(material_id)), exist_ok=True)
+        sub_material_content_list = {}
+        for index, sub_material_path in enumerate(sub_material_path_list):
+            new_sub_material_path = os.path.join(
+                self.material_library_dir, str(material_id), f"{material_id}_{index+1}.{sub_material_path.split('.')[-1]}")
+
+            shutil.move(sub_material_path, new_sub_material_path)
+            sub_material_content_list[index+1] = (
+                new_sub_material_path, description)
+        self.append_material(Material(id=str(material_id), title=title,
+                                      description=description, sub_material_id=len(sub_material_path_list)+1, sub_material_content_list=sub_material_content_list))
 
     def insert_material_with_one_sub_material_to_v2(self, title, description, sub_material_path: str):
         """上传到的是v2部分"""
@@ -176,12 +195,12 @@ class MaterialLibrary(BaseModel):
         """
         # 先对所有素材进行分析(并行运行),对没有分析过的素材进行分析
         for material in self.material_list.values():
-            asyncio.run(material.analyze_material())
-
+            asyncio.run(material.analyze_material(self.material_library_dir))
         material_library = self.get_all_material_info()
         gemini_generative_model = get_gemini_multimodal_model(
-            SELECT_APPROPRIATE_MATERIAL_SYSTEM_PROMPT_en.format(
-                expert_knowledge=SELECT_APPROPRIATE_MATERIAL_EXPERT_KNOWLEDGE_en, material_library=material_library), SELECT_APPROPRIATE_MATERIAL_SYSTEM_PROMPT_SCHEMA)
+            system_prompt=SELECT_APPROPRIATE_MATERIAL_SYSTEM_PROMPT_en.format(
+                expert_knowledge=SELECT_APPROPRIATE_MATERIAL_EXPERT_KNOWLEDGE_en, material_library=material_library),
+            response_schema=SELECT_APPROPRIATE_MATERIAL_SYSTEM_PROMPT_SCHEMA)
 
         response = gemini_generative_model.generate_content(
             [
@@ -189,8 +208,9 @@ class MaterialLibrary(BaseModel):
             ]
         )
         content = json.loads(response.candidates[0].content.parts[0].text)
-
-        return content["material_id_list"]
+        logger.info(f"require: {require}, now material_library:{
+                    material_library}, select_appropriate_material: {content["submaterial_id_list"]}")
+        return content["submaterial_id_list"]
 
     async def crawl_material_by_link(self, link: str):
         """
@@ -250,7 +270,6 @@ class MaterialLibrary(BaseModel):
                         sub_material_content_list={}
                     )
                     self.append_material(material)
-                    await material.analyze_material()
                 else:
                     content = await page.content()
                     logger.info(content[:2000])
@@ -298,9 +317,6 @@ class MaterialLibrary(BaseModel):
         :param keyword: 商品关键词
         :return: Material
         """
-        # 将keyword翻译为英文
-        keyword = Translator(from_lang="ZH", to_lang="EN-US").translate(
-            keyword)
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             context = await browser.new_context(

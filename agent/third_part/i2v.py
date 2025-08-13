@@ -355,10 +355,6 @@ class Veo3(I2VStrategy):
         self.output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
         
-        print(f"✅ Veo3VideoGenerator 初始化完成")
-        print(f"   项目ID: {project_id}")
-        print(f"   服务位置: {location_id}")
-        print(f"   输出目录: {output_dir}")
     
     def _image_to_base64(self, image_path: str) -> str:
         """

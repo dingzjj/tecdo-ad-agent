@@ -21,6 +21,50 @@ from agent.ad_agent.pojo import gradio_chat_message_list2ad_agent_chat_message_l
 from agent.ad_agent.pojo import gradio_chat_message_list2chat_message_list
 
 
+def send_message_to_ad_agent(user_id, user_input, chatbot):
+    if user_id not in AdAgents:
+        AdAgents[user_id] = AdAgent(user_id)
+    chat_history = gradio_chat_message_list2chat_message_list(chatbot)
+    chat_history.pop(0)
+    # 弹出最后一个元素，因为此时chatbot中最后一个元素为用户输入
+    chat_history.pop(-1)
+    question = user_input["text"]
+    user_files = user_input["files"]
+    img_number = 1
+    doc_number = 1
+    video_number = 1
+    other_number = 1
+    overhead_information = {}
+    for file_path in user_files:
+        # 等待上传完毕再往后运行，即等到该文件的大小大于0
+        while os.path.getsize(file_path) == 0:
+            time.sleep(1)
+        # 假如文件是png等等文件结尾的，则将其已img_{number}加入到overhead_information中
+        if file_path.endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")):
+            overhead_information[f"image_{img_number}"] = file_path
+            img_number += 1
+        # 假如文件是pdf等等文件结尾的，则将其已pdf_{number}加入到overhead_information中
+        elif file_path.endswith((".pdf", ".docx", ".doc", ".txt", ".md", ".csv", ".xls", ".xlsx", ".json")):
+            overhead_information[f"doc_{doc_number}"] = file_path
+            doc_number += 1
+        elif file_path.endswith((".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv")):
+            overhead_information[f"video_{video_number}"] = file_path
+            video_number += 1
+        # 假如文件是其他文件结尾的，则将其已file_{number}加入到overhead_information中
+        else:
+            overhead_information[f"other_{other_number}"] = file_path
+            other_number += 1
+
+    result = AdAgents[user_id].invoke(
+        message=question, overhead_information=overhead_information, chat_history=chat_history)
+
+    for file_path in user_files:
+        overhead_information[file_path] = file_path
+    chatbot.append(gr.ChatMessage(
+        role="assistant", content=result["messages"][-1].content))
+    return None, chatbot, AdAgents[user_id].state.material_library.return_material_list()
+
+
 def send_message_to_do_workflow(user_input, chatbot, is_end):
     # 此处的chatbot是已经包含用户输入的chatbot
     user_question = user_input["text"]
@@ -99,45 +143,3 @@ def send_message_to_do_workflow(user_input, chatbot, is_end):
         logger.error(f"Error in chat_with_ad_agent: {e}")
         logger.error(traceback.format_exc())  # 打印完整的调用堆栈
         return "", chatbot, is_end
-
-
-def send_message_to_ad_agent(user_id, user_input, chatbot):
-    if user_id not in AdAgents:
-        AdAgents[user_id] = AdAgent(user_id)
-    chat_history = gradio_chat_message_list2chat_message_list(chatbot)
-    chat_history.pop(0)
-    question = user_input["text"]
-    user_files = user_input["files"]
-    img_number = 1
-    doc_number = 1
-    video_number = 1
-    other_number = 1
-    overhead_information = {}
-    for file_path in user_files:
-        # 等待上传完毕再往后运行，即等到该文件的大小大于0
-        while os.path.getsize(file_path) == 0:
-            time.sleep(1)
-        # 假如文件是png等等文件结尾的，则将其已img_{number}加入到overhead_information中
-        if file_path.endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")):
-            overhead_information[f"image_{img_number}"] = file_path
-            img_number += 1
-        # 假如文件是pdf等等文件结尾的，则将其已pdf_{number}加入到overhead_information中
-        elif file_path.endswith((".pdf", ".docx", ".doc", ".txt", ".md", ".csv", ".xls", ".xlsx", ".json")):
-            overhead_information[f"doc_{doc_number}"] = file_path
-            doc_number += 1
-        elif file_path.endswith((".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv")):
-            overhead_information[f"video_{video_number}"] = file_path
-            video_number += 1
-        # 假如文件是其他文件结尾的，则将其已file_{number}加入到overhead_information中
-        else:
-            overhead_information[f"other_{other_number}"] = file_path
-            other_number += 1
-
-    result = AdAgents[user_id].invoke(
-        message=question, overhead_information=overhead_information, chat_history=chat_history)
-
-    for file_path in user_files:
-        overhead_information[file_path] = file_path
-    chatbot.append(gr.ChatMessage(
-        role="assistant", content=result["messages"][-1].content))
-    return None, chatbot, AdAgents[user_id].state.material_library.return_material_list()

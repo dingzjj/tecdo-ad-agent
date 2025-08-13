@@ -21,7 +21,7 @@ class MultimodalGenerationModel(ABC):
         self.id = id
 
     @abstractmethod
-    async def generate(self, **param) -> str:
+    async def generate(self, **param) -> str | list[str]:
         """
         param
         t2i: positive_prompt, negative_prompt(optional)
@@ -82,8 +82,7 @@ class Flux_i2i(MultimodalGenerationModel):
             raise ValueError("image_path不能为空")
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-        output_paths = run_flux_i2i(image_path, positive_prompt,
-                                    conf.get_path("share_material_dir"))
+        output_paths = await run_flux_i2i(image_path, positive_prompt, conf.get_path("share_material_dir"))
         if len(output_paths) == 0:
             raise ValueError("生成失败")
         return output_paths[0]
@@ -101,7 +100,7 @@ class Qwen_t2i(MultimodalGenerationModel):
             negative_prompt = ""
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-        return await run_qwen_t2i(positive_prompt, negative_prompt, conf.get_path("share_material_dir"))
+        return await run_qwen_t2i(positive_prompt, negative_prompt, conf.get_path("share_material_dir"), is_optimize_prompt_words=True)
 
 
 class Kling2_1_i2v(MultimodalGenerationModel):
@@ -110,6 +109,9 @@ class Kling2_1_i2v(MultimodalGenerationModel):
 
     async def generate(self, **param) -> str:
         image_path = param["image_path"]
+
+        # 对图片大小进行判断
+
         positive_prompt = param["positive_prompt"]
         if "negative_prompt" in param:
             negative_prompt = param["negative_prompt"]
@@ -233,18 +235,14 @@ class ModelFactory:
         models = filtered_models
         logger.info(
             f"{specific_function} -> filtered_models:{filtered_models}")
-        # 将中文转换为英文
-        require_en = Translator(from_lang="ZH",
-                                to_lang="EN-US").translate(require)
         multimodal_model = get_gemini_multimodal_model(
             system_prompt=CHOOSE_MODEL_SYSTEM_PROMPT.format(
                 models=str(models)), response_schema=CHOOSE_MODEL_RESPONSE_SCHEMA)
-
         # 询问模型
         try:
             response = multimodal_model.generate_content(
                 [
-                    require_en
+                    require
                 ]
             )
         except Exception as e:
@@ -272,8 +270,6 @@ class ModelFactory:
         Raises:
             Exception: 如果在加载配置文件、读取视频文件、初始化模型或查询模型时发生任何错误，将抛出异常。
         """
-        require_en = Translator(from_lang="Chinese",
-                                to_lang="English").translate(require)
         try:
             with open(conf.get_path("models_file"), "r", encoding="utf-8") as f:
                 models = json.load(f)
@@ -288,7 +284,7 @@ class ModelFactory:
         try:
             response = multimodal_model.generate_content(
                 [
-                    require_en
+                    require
                 ]
             )
         except Exception as e:

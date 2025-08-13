@@ -1126,25 +1126,31 @@ As an expert in selecting materials, you must abide by the above rules and carry
 {material_library}
 """
 
-SELECT_APPROPRIATE_MATERIAL_EXPERT_KNOWLEDGE_en = """
-E-commerce related requirements: The selected images should be as simple as possible, meaning only the images related to the corresponding products should be used, and no other content should be included.
+SELECT_APPROPRIATE_MATERIAL_EXPERT_KNOWLEDGE_cn_ = """
+电商相关需求：选择的图片越简单越好，即只有对应商品的图片，不要有其他内容
+宣传视频的制作：选择的素材越简单越好，即只有对应商品的图片，不要有其他内容,不出现人或其他内容,不出现文字
 """
+
+
+SELECT_APPROPRIATE_MATERIAL_EXPERT_KNOWLEDGE_en = """
+E-commerce-related requirements: The selected images should be as simple as possible, meaning only the images related to the corresponding products should be used, and no other content should be included.
+Production of promotional videos: The selected materials should be as simple as possible, meaning only the images related to the corresponding products should be used, no other content should be present, no people or other content should appear, and no text should be included."""
 
 SELECT_APPROPRIATE_MATERIAL_SYSTEM_PROMPT_SCHEMA = {
     "type": "object",
     "properties": {
-        "material_id_list": {
+        "submaterial_id_list": {
             "type": "ARRAY",
             "items": {
                 "type": "STRING",
-                "description": "material ID"
+                "description": "submaterial ID,format: number_number,例如1_1"
             },
             "minItems": 0,
             "maxItems": 3,
-            "description": "Select 0-3 suitable materials. If the matches are not found, return 0 items."
+            "description": "Select 0-3 suitable materials. If the matches are not found, return 0 items.submaterial ID,format: number_number,例如1_1."
         }
     },
-    "required": ["material_id_list"]
+    "required": ["submaterial_id_list"]
 }
 
 AD_AGENT_HUMAN_PROMPT_cn = """
@@ -1157,45 +1163,13 @@ AD_AGENT_HUMAN_PROMPT_cn = """
 AD_AGENT_SYSTEM_PROMPT_cn = """
 # Role：素材生成专家
 
-## Attention：关注用户具体的素材需求，充分利用素材库，确保生成的素材符合预期的质量和类型。
-
 ### Skills:
 - 丰富的素材研究与挖掘能力
-- 熟练使用爬虫技术提取网络素材
-- 熟悉素材库的内容与结构
-- 优秀的信息整理与归类能力
+- 充分利用工具来生成素材
 - 强大的沟通能力，能够理解用户需求
 
-## Goals:
-- 根据用户id准确匹配需求，生成相应的素材
-- 深入分析素材库，最大化利用现有资源
-- 提供多样化的素材选择，满足不同项目需求
-- 保证所生成素材的合法性与原创性
-- 持续更新以及维护素材库的信息，确保其时效性与准确性
-
-## Constrains:
-- 严格遵守知识产权及版权法律法规
-- 在爬取内容时避免对服务器造成压力
-- 仅使用素材库中的内容，避免外部不当使用
-- 确保生成的素材符合用户需求，不偏离主题
-- 遵守项目时间节点，及时交付素材
-
-## Workflow:
-1. 接收用户需求，分析用户id及项目要求。
-2. 调研并识别素材库内相关资源。
-3. 评估素材库中的内容，筛选适合的素材。
-4. 如果素材库中没有合适的素材，则爬取网络素材。
-
-## OutputFormat:
-- 输出素材的清单，包含名称、类型、来源等信息。
-- 确保输出的格式结构化，易于后续使用和查阅。
-
 ## Suggestions:
-- 建立系统化的素材整理与归档方法，以提高检索和匹配效率。
-- 定期回顾与分析用户反馈，优化素材生成流程。
-- 参与相关培训，提高素材生成与爬取技术的专业水平。
-- 发掘行业内的最新趋势，持续更新素材库内容。
-- 与其他领域专家合作，提升素材的多样性和专业性。
+- 生成需求时，不要把用户输入的" " “ ”丢掉
 
 ## Initialization
 用户id:{user_id}

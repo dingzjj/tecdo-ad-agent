@@ -11,6 +11,8 @@ import subprocess
 import requests
 from typing import Dict, Any, Literal
 
+from agent.exception import Veo3Error
+
 
 class Veo3:
     def __init__(self, project_id: str = conf.get("veo3.project_id"), location_id: str = conf.get("veo3.location_id"),
@@ -138,7 +140,7 @@ class Veo3:
                 logger.info("⏳ 正在处理中...")
                 time.sleep(30)
 
-    async def i2v(self, img_path: str, positive_prompt: str, negative_prompt: str, aspect_ratio: Literal["16:9", "9:16"] = "16:9", duration: Literal["8"] = "8", resolution: Literal["1080p"] = "1080p", generate_audio=True, sample_count: int = 1, add_watermark: bool = False):
+    async def i2v(self, img_path: str, positive_prompt: str, negative_prompt: str, aspect_ratio: Literal["16:9", "9:16"] = "16:9", duration: Literal[8] = 8, resolution: Literal["1080p"] = "1080p", generate_audio=True, sample_count: int = 1, add_watermark: bool = False):
         """
         核心方法：生成视频
 
@@ -197,15 +199,15 @@ class Veo3:
             try:
                 operation_name = self._submit_generation_task(request_payload)
                 video_path = self._fetch_result(operation_name)
-                break
+                logger.info(f"🎉 视频生成完成！文件路径: {video_path}")
+                return video_path
             except Exception as e:
                 logger.error(f"视频生成失败: {e}")
                 time.sleep(3)
                 continue
-        logger.info(f"🎉 视频生成完成！文件路径: {video_path}")
-        return video_path
+        raise Veo3Error(f"视频生成失败: {e}")
 
-    async def t2v(self, positive_prompt, negative_prompt, aspect_ratio: Literal["16:9", "9:16"] = "16:9", duration: Literal["8"] = "8", resolution: Literal["1080p"] = "1080p", generate_audio=True, sample_count: int = 1, add_watermark: bool = False):
+    async def t2v(self, positive_prompt, negative_prompt, aspect_ratio: Literal["16:9", "9:16"] = "16:9", duration: Literal[8] = 8, resolution: Literal["1080p"] = "1080p", generate_audio=True, sample_count: int = 1, add_watermark: bool = False):
         """
         核心方法：生成视频
 
@@ -247,10 +249,11 @@ class Veo3:
             try:
                 operation_name = self._submit_generation_task(request_payload)
                 video_path = self._fetch_result(operation_name)
-                break
+                logger.info(f"🎉 视频生成完成！文件路径: {video_path}")
+                return video_path
             except Exception as e:
                 logger.error(f"视频生成失败: {e}")
                 time.sleep(3)
                 continue
-        logger.info(f"🎉 视频生成完成！文件路径: {video_path}")
-        return video_path
+
+        raise Veo3Error(f"视频生成失败: {e}")

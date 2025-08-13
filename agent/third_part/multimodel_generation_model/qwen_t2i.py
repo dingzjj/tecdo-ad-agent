@@ -1,3 +1,4 @@
+from agent.utils import get_time_id
 from agent.exception import QwenT2IError
 from config import logger
 import requests
@@ -12,6 +13,7 @@ from requests import RequestException
 from typing import Optional
 import asyncio
 from config import conf
+from agent.mini_agent import GenerateImagePromptAgent
 
 
 async def run_qwen_t2i(
@@ -25,6 +27,7 @@ async def run_qwen_t2i(
     steps: Optional[int] = 25,
     cfg: Optional[float] = 3.0,
     shift: Optional[float] = 3.10,
+    is_optimize_prompt_words: bool = False
 ):
     """
     运行 Qwen 图像生成模型
@@ -45,6 +48,11 @@ async def run_qwen_t2i(
         generate_mode 比例值参考："1:1", "3:4", "5:8", "9:16", "9:21", "4:3", "3:2", "16:9", "21:9"
         若 generate_mode = "custom"，则 width 和 height 必填
     """
+
+    if is_optimize_prompt_words:
+        positive_prompt = GenerateImagePromptAgent().generate_image_prompt(
+            positive_prompt)
+
     SERVER_ADDRESS = conf.get("comfyui.server_address")
     # 生成客户端唯一 ID
     CLIENT_ID = str(uuid.uuid4())
@@ -71,7 +79,7 @@ async def run_qwen_t2i(
     output_images = get_images(SERVER_ADDRESS, prompt_id)
 
     # 存储
-    save_images(SERVER_ADDRESS, output_images, output_dir)
+    return save_images(SERVER_ADDRESS, output_images, output_dir)
 
 
 def get_workflow(workflow_file: str) -> dict:
@@ -308,7 +316,7 @@ def save_images(server_address: str, outputs: dict, output_dir: str = "./images"
 
             # 生成随机文件名并检查是否存在
             while True:
-                random_filename = f"{uuid.uuid4()}{ext}"
+                random_filename = f"{get_time_id()}{ext}"
                 output_path = os.path.join(output_dir, random_filename)
                 if not os.path.exists(output_path):
                     break  # 找到一个唯一的文件名，退出循环
@@ -316,7 +324,7 @@ def save_images(server_address: str, outputs: dict, output_dir: str = "./images"
             # 保存图片
             image.save(output_path)
             logger.info(f"💾 已保存图片: {output_path}")
-
+            return output_path
         except Exception as e:
             raise QwenT2IError(f"❌ 图片解码失败: {params}")
 

@@ -1,4 +1,10 @@
 # 采用reAct框架 不断的调工具 - 直到得出结果（需要工具输出的src比较完善）
+from agent.mini_agent import TranslatorAgent
+from agent.mini_agent import GenerateVideoPromptAgent
+import json
+from typing import Dict
+from typing import Annotated, List
+from pydantic.v1 import tools
 from agent.utils import is_video_file
 from config import logger
 from langchain_core.messages import SystemMessage
@@ -26,7 +32,7 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.tools import tool
 import os
 import asyncio
-
+from agent.llm import create_azure_gpt5_llm
 # first 创建用户文件夹
 from pydantic import BaseModel
 from pydantic import Field
@@ -69,6 +75,7 @@ class AdAgentState(BaseModel):
 
 # TODO 创作能力总结 -> 多图创作能力，多视频创作能力，文+图+视频混合创作能力
 # TODO 根据用户选择的图片生成商品lora model，并使用该lora model进行创作
+# TODO 提高agent使用素材库的能力 （所有未指定的生成都先查看素材库判断是否有合适的素材）
 # TODO 多跳能力优化
 
 
@@ -88,20 +95,23 @@ class AdAgent:
         :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
         :return: 响应
         """
+        # overhead_information_list = []
+        # for key, value in overhead_information.items():
+        #     overhead_information_list.append((key, value))
 
         react_agent = create_react_agent(
             # prompt=SystemMessage(content=AD_AGENT_SYSTEM_PROMPT_cn.format(
             #     user_id=self.user_id, material_library=self.state.material_library.get_all_material_info())),
-            prompt=SystemMessage(content=AD_AGENT_SYSTEM_PROMPT_cn.format(
-                user_id=self.user_id)),
-            model=create_azure_llm(),
+            model=create_azure_gpt5_llm(),
             tools=[get_material_from_link, get_material_in_web, upload_material, pre_review_material_in_material_library, pre_review_material_in_user_input, create_image_by_t2i, create_video_by_t2v,
                    create_video_by_i2v_wo_assign, create_video_by_i2v_with_assign, create_image_by_i2i_wo_assign, create_image_by_i2i_with_assign]
         )
-        NOW_EPOCH_CHAT_HISTORY = chat_history.copy()
-        NOW_EPOCH_CHAT_HISTORY.append(HumanMessage(
+        # 在chat_history头部中添加SystemMessage(content=AD_AGENT_SYSTEM_PROMPT_cn.format(user_id=self.user_id))
+        chat_history.insert(0, SystemMessage(content=AD_AGENT_SYSTEM_PROMPT_cn.format(
+            user_id=self.user_id)))
+        chat_history.append(HumanMessage(
             content=AD_AGENT_HUMAN_PROMPT_cn.format(question=message, overhead_information=overhead_information, user_id=self.user_id)))
-        result = react_agent.invoke({"messages": NOW_EPOCH_CHAT_HISTORY})
+        result = react_agent.invoke({"messages": chat_history})
         return result
 
 
@@ -109,11 +119,10 @@ AdAgents: dict[str, AdAgent] = {}
 
 
 @tool
-def get_material_from_link(user_id: str, link: str):
+def get_material_from_link(user_id: Annotated[str, Field(description="用户id")],
+                           link: Annotated[str, Field(description="链接")]):
     """
     根据链接获取素材
-    :param link: 链接
-    :return: 素材
     """
     if user_id not in AdAgents:
         raise ValueError(f"用户{user_id}不存在")
@@ -126,13 +135,12 @@ def get_material_from_link(user_id: str, link: str):
 
 
 @tool
-def upload_material(user_id: str, overhead_information: dict):
+def upload_material(user_id: Annotated[str, Field(description="用户id")],
+                    overhead_information: Annotated[str, Field(description="""额外信息,用于记录用户输入的图片，文档，文件,json格式,例如：{"image_1": "/data/dzj/ad_agent/temp/phone/phone.jpg", "image_2": "/data/dzj/ad_agent/temp/phone/phone.jpg"}""")]):
     """
     上传素材
-    :param user_id: 用户id
-    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
-    :return: 素材
     """
+    overhead_information = json.loads(overhead_information)
     if user_id not in AdAgents:
         raise ValueError(f"用户{user_id}不存在")
     for key, value in overhead_information.items():
@@ -146,12 +154,14 @@ def upload_material(user_id: str, overhead_information: dict):
 
 
 @tool
-def get_material_in_web(user_id: str, keyword: str):
+def get_material_in_web(user_id: Annotated[str, Field(description="用户id")],
+                        keyword: Annotated[str, Field(description="关键词")]):
     """
-    根据关键词获取素材
-    :param user_id: 用户id
-    :param keyword: 关键词
+    根据关键词在网上获取素材
     """
+    # 一切在工具内的都为英文
+    keyword = TranslatorAgent().translate(
+        from_lang="Chinese", to_lang="English", text=keyword)
     if user_id not in AdAgents:
         raise ValueError(f"用户{user_id}不存在")
     asyncio.run(
@@ -160,11 +170,10 @@ def get_material_in_web(user_id: str, keyword: str):
 
 
 @tool
-def pre_review_material_in_material_library(user_id: str, material_id: str):
+def pre_review_material_in_material_library(user_id: Annotated[str, Field(description="用户id")],
+                                            material_id: Annotated[str, Field(description="素材id,素材id的格式为{number}_{number}，例如1_1")]):
     """
     预审素材,预审素材库中的素材，
-    :param user_id: 用户id
-    :param material_id: 素材id,素材id的格式为"{number}_{number}"，例如"1_1"
     """
     if user_id not in AdAgents:
         raise ValueError(f"用户{user_id}不存在")
@@ -187,14 +196,14 @@ def pre_review_material_in_material_library(user_id: str, material_id: str):
 
 
 @tool
-def pre_review_material_in_user_input(overhead_information: dict):
+def pre_review_material_in_user_input(overhead_information: Annotated[str, Field(description="""额外信息,用于记录用户输入的图片，文档，文件,json格式,例如：{"image_1": "/data/dzj/ad_agent/temp/phone/phone.jpg", "image_2": "/data/dzj/ad_agent/temp/phone/phone.jpg"}""")]):
     """
     预审素材，预审用户输入的图片，文档，文件
-    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
     """
     pre_review_material_result_list = []
+    overhead_information = json.loads(overhead_information)
     for key, value in overhead_information.items():
-        if key.startswith("video_") or key.startswith("img_"):
+        if key.startswith("video_") or key.startswith("image_"):
             # 对图片进行预审
             video_path = value
             text_input = None
@@ -220,50 +229,123 @@ def pre_review_material_in_user_input(overhead_information: dict):
 
 # 用户给定图片or没有给定图片
 @tool
-def create_image_by_t2i(user_id: str, require: str):
+def create_image_by_t2i(user_id: Annotated[str, Field(description="用户id")],
+                        require: Annotated[str, Field(description="需求，具体需求，例如对图片的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")]):
     """
     使用text-to-image模型创建图片
-    :param user_id: 用户id
-    :param require: 需求，具体需求，例如对图片的具体要求，例如："一个穿着白色连衣裙的女孩在海边跳舞"
     """
     if user_id not in AdAgents:
         raise ValueError(f"用户{user_id}不存在")
-    model_id = model_factory.choose_model_by_specific_function(
-        require, "text to image")
-    model = model_factory.get_model_by_id(model_id)
-    output_path = asyncio.run(model.generate(positive_prompt=require))
-    # 将生成的素材放入素材库
-    AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
-        title=require, description=require, sub_material_path=output_path)
-    return "图片生成成功,请在素材库中查看"
+    # 一切在工具内的都为英文
+    require = TranslatorAgent().translate(
+        from_lang="Chinese", to_lang="English", text=require)
+    # 在素材库中选择合适的素材
+    material_id_list = AdAgents[user_id].state.material_library.select_appropriate_material(
+        require)
+    if len(material_id_list) == 0:
+        model_id = model_factory.choose_model_by_specific_function(
+            require, "text to image")
+        model = model_factory.get_model_by_id(model_id)
+        output_path = asyncio.run(model.generate(positive_prompt=require))
+        # 将生成的素材放入素材库
+        AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
+            title=require, description=require, sub_material_path=output_path)
+        return "图片生成成功,请在素材库中查看"
+    else:
+        bigger_than_one = False
+        model_id = model_factory.choose_model_by_specific_function(
+            require, "image to image")
+        model = model_factory.get_model_by_id(model_id)
+        for material_id in material_id_list:
+            material_path = AdAgents[user_id].state.material_library.get_material_by_id(
+                material_id)
+            if material_path is None:
+                continue
+            if not os.path.exists(material_path):
+                continue
+            if not is_image_file(material_path):
+                continue
+            bigger_than_one = True
+            # 图片 + 需求 -> 生成图片prompt
+            GenerateVideoPromptAgent().generate_video_prompt(
+                require=require, material_path=material_path)
+            output_path = asyncio.run(model.generate(
+                positive_prompt=require, image_path=material_path))
+            AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
+                title=require, description=require, sub_material_path=output_path)
+        if not bigger_than_one:
+            output_path = asyncio.run(model.generate(positive_prompt=require))
+            # 将生成的素材放入素材库
+            AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
+                title=require, description=require, sub_material_path=output_path)
+        return "图片生成成功,请在素材库中查看"
 
 
 @tool
-def create_video_by_t2v(user_id: str, require: str):
+def create_video_by_t2v(user_id: Annotated[str, Field(description="用户id")],
+                        require: Annotated[str, Field(description="需求，具体需求，例如对视频的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")]):
     """
     使用text-to-video模型创建视频
-    :param user_id: 用户id
-    :param require: 需求，具体需求，例如对视频的具体要求，例如："一个穿着白色连衣裙的女孩在海边跳舞"
     """
-    model_id = model_factory.choose_model_by_specific_function(
-        require, "text to video")
-    model = model_factory.get_model_by_id(model_id)
-    output_path = asyncio.run(model.generate(positive_prompt=require))
-    AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
-        title=require, description=require, sub_material_path=output_path)
-    return "视频生成成功,请在素材库中查看"
+
+    # 一切在工具内的都为英文
+    require = TranslatorAgent().translate(
+        from_lang="Chinese", to_lang="English", text=require)
+
+    # 在素材库中选择合适的素材
+    material_id_list = AdAgents[user_id].state.material_library.select_appropriate_material(
+        require)
+    if len(material_id_list) == 0:
+        model_id = model_factory.choose_model_by_specific_function(
+            require, "text to video")
+        model = model_factory.get_model_by_id(model_id)
+        output_path = asyncio.run(model.generate(positive_prompt=require))
+        AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
+            title=require, description=require, sub_material_path=output_path)
+        return "视频生成成功,请在素材库中查看"
+    else:
+        bigger_than_one = False
+        model_id = model_factory.choose_model_by_specific_function(
+            require, "image to video")
+        model = model_factory.get_model_by_id(model_id)
+        for material_id in material_id_list:
+            material_path = AdAgents[user_id].state.material_library.get_material_by_id(
+                material_id)
+            if material_path is None:
+                continue
+            if not is_image_file(material_path):
+                continue
+            video_prompt = GenerateVideoPromptAgent().generate_video_prompt(
+                require=require, material_path=material_path)
+            output_path = asyncio.run(model.generate(
+                positive_prompt=video_prompt, image_path=material_path))
+            AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
+                title=require, description=require, sub_material_path=output_path)
+        if not bigger_than_one:
+            model_id = model_factory.choose_model_by_specific_function(
+                require, "text to video")
+            model = model_factory.get_model_by_id(model_id)
+            output_path = asyncio.run(model.generate(positive_prompt=require))
+            AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
+                title=require, description=require, sub_material_path=output_path)
+
+        return f"根据素材{material_id_list}生成视频,请在素材库中查看"
 
 
 @tool
-def create_video_by_i2v_wo_assign(user_id: str, require: str, overhead_information: dict):
+def create_video_by_i2v_wo_assign(user_id: Annotated[str, Field(description="用户id")],
+                                  require: Annotated[str, Field(description="需求，具体需求，例如对视频的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")],
+                                  overhead_information: Annotated[str, Field(description="""额外信息,用于记录用户输入的图片，文档，文件,json格式,例如：{"image_1": "/data/dzj/ad_agent/temp/phone/phone.jpg", "image_2": "/data/dzj/ad_agent/temp/phone/phone.jpg"}""")]):
     """
     用户没有指定图片或者用户希望根据其在附加输入中输入的图片来生成视频，使用image-to-video模型创建视频
-    :param user_id: 用户id
-    :param require: 需求，具体需求，例如对视频的具体要求，例如："一个穿着白色连衣裙的女孩在海边跳舞"
-    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
     """
+    # 一切在工具内的都为英文
+    require = TranslatorAgent().translate(
+        from_lang="Chinese", to_lang="English", text=require)
+
     input_image_list = []
     # 判断其中是否有image_开头
+    overhead_information = json.loads(overhead_information)
     for key, value in overhead_information.items():
         if key.startswith("image_"):
             # 使用image-to-video模型创建视频
@@ -281,11 +363,13 @@ def create_video_by_i2v_wo_assign(user_id: str, require: str, overhead_informati
                 return f"素材{material_id}不存在"
             if not is_image_file(material_path):
                 return f"素材{material_id}不是图片"
+            video_prompt = GenerateVideoPromptAgent().generate_video_prompt(
+                require=require, material_path=material_path)
             model_id = model_factory.choose_model_by_specific_function(
                 require, "image to video")
             model = model_factory.get_model_by_id(model_id)
             output_path = asyncio.run(model.generate(
-                image_path=material_path, positive_prompt=require))
+                image_path=material_path, positive_prompt=video_prompt))
             AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
                 title=require, description=require, sub_material_path=output_path)
         return "视频生成成功,请在素材库中查看"
@@ -295,8 +379,10 @@ def create_video_by_i2v_wo_assign(user_id: str, require: str, overhead_informati
             require, "image to video")
         model = model_factory.get_model_by_id(model_id)
         for input_image in input_image_list:
+            video_prompt = GenerateVideoPromptAgent().generate_video_prompt(
+                require=require, material_path=input_image)
             output_path = asyncio.run(model.generate(
-                image_path=input_image, positive_prompt=require))
+                image_path=input_image, positive_prompt=video_prompt))
             AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
                 title=require, description=require, sub_material_path=output_path)
 
@@ -304,13 +390,16 @@ def create_video_by_i2v_wo_assign(user_id: str, require: str, overhead_informati
 
 
 @tool
-def create_video_by_i2v_with_assign(user_id: str, require: str, material_id: str):
+def create_video_by_i2v_with_assign(user_id: Annotated[str, Field(description="用户id")],
+                                    require: Annotated[str, Field(description="需求，具体需求，例如对视频的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")],
+                                    material_id: Annotated[str, Field(description="素材id,素材id的格式为{number}_{number}，例如1_1")]):
     """
     用户指定了使用素材库中的图片来生成视频，使用image-to-video模型创建视频
-    :param user_id: 用户id
-    :param require: 需求，具体需求，例如对视频的具体要求，例如："一个穿着白色连衣裙的女孩在海边跳舞"
-    :param material_id: 素材id,素材id的格式为"{number}_{number}"，例如"1_1"
     """
+    # 一切在工具内的都为英文
+    require = TranslatorAgent().translate(
+        from_lang="Chinese", to_lang="English", text=require)
+
     # 从素材库中获取素材
     material_path = AdAgents[user_id].state.material_library.get_material_by_id(
         material_id)
@@ -324,24 +413,28 @@ def create_video_by_i2v_with_assign(user_id: str, require: str, material_id: str
     model_id = model_factory.choose_model_by_specific_function(
         require, "image to video")
     model = model_factory.get_model_by_id(model_id)
+    video_prompt = GenerateVideoPromptAgent().generate_video_prompt(
+        require=require, material_path=material_path)
     output_path = asyncio.run(model.generate(
-        image_path=material_path, positive_prompt=require))
+        image_path=material_path, positive_prompt=video_prompt))
     AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
         title=require, description=require, sub_material_path=output_path)
     return "视频生成成功,请在素材库中查看"
 
 
 @tool
-def create_image_by_i2i_wo_assign(user_id: str, positive_prompt: str, negative_prompt: str, overhead_information: dict):
+def create_image_by_i2i_wo_assign(user_id: Annotated[str, Field(description="用户id")],
+                                  positive_prompt: Annotated[str, Field(description="正向提示词，具体需求，例如对图片的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")],
+                                  overhead_information: Annotated[str, Field(description="""额外信息,用于记录用户输入的图片，文档，文件,json格式,例如：{"image_1": "/data/dzj/ad_agent/temp/phone/phone.jpg", "image_2": "/data/dzj/ad_agent/temp/phone/phone.jpg"}""")]):
     """
     用户没有指定图片或者用户希望根据其在附加输入中输入的图片来生成图片，使用image-to-image模型创建图片
-    :param user_id: 用户id
-    :param positive_prompt: 正向提示词，具体需求，例如对图片的具体要求，例如："一个穿着白色连衣裙的女孩在海边跳舞"
-    :param negative_prompt: 负向提示词，例如："不要有文字"
-    :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
     """
+    # 一切在工具内的都为英文
+    positive_prompt = TranslatorAgent().translate(
+        from_lang="Chinese", to_lang="English", text=positive_prompt)
     input_image_list = []
     # 判断其中是否有image_开头
+    overhead_information = json.loads(overhead_information)
     for key, value in overhead_information.items():
         if key.startswith("image_"):
             # 使用image-to-video模型创建视频
@@ -351,7 +444,7 @@ def create_image_by_i2i_wo_assign(user_id: str, positive_prompt: str, negative_p
         material_id_list = AdAgents[user_id].state.material_library.select_appropriate_material(
             positive_prompt)
         if len(material_id_list) == 0:
-            return "没有找到合适的素材,请调用get_material_in_web来获取素材"
+            return "没有找到合适的素材,请调用create_image_by_t2i来生成图片"
         for material_id in material_id_list:
             material_path = AdAgents[user_id].state.material_library.get_material_by_id(
                 material_id)
@@ -362,10 +455,12 @@ def create_image_by_i2i_wo_assign(user_id: str, positive_prompt: str, negative_p
             model_id = model_factory.choose_model_by_specific_function(
                 positive_prompt, "image to image")
             model = model_factory.get_model_by_id(model_id)
-            output_path = asyncio.run(model.generate(
-                image_path=material_path, positive_prompt=positive_prompt, negative_prompt=negative_prompt))
-            AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
-                title=positive_prompt, description=positive_prompt, sub_material_path=output_path)
+            output_path_list = asyncio.run(model.generate(
+                image_path=material_path, positive_prompt=positive_prompt, negative_prompt=""))
+            if isinstance(output_path_list, str):
+                output_path_list = [output_path_list]
+            AdAgents[user_id].state.material_library.insert_material_with_sub_material_list_to_v2(
+                title=positive_prompt, description=positive_prompt, sub_material_path_list=output_path_list)
         return "图片生成成功,请在素材库中查看"
     else:
         # 使用以上图片 + 需求 来创建图片
@@ -374,7 +469,7 @@ def create_image_by_i2i_wo_assign(user_id: str, positive_prompt: str, negative_p
         model = model_factory.get_model_by_id(model_id)
         for input_image in input_image_list:
             output_path = asyncio.run(model.generate(
-                image_path=input_image, positive_prompt=positive_prompt, negative_prompt=negative_prompt))
+                image_path=input_image, positive_prompt=positive_prompt, negative_prompt=""))
             AdAgents[user_id].state.material_library.insert_material_with_one_sub_material_to_v2(
                 title=positive_prompt, description=positive_prompt, sub_material_path=output_path)
 
@@ -382,14 +477,19 @@ def create_image_by_i2i_wo_assign(user_id: str, positive_prompt: str, negative_p
 
 
 @tool
-def create_image_by_i2i_with_assign(user_id: str, positive_prompt: str, negative_prompt: str, material_id: str):
+def create_image_by_i2i_with_assign(user_id: Annotated[str, Field(description="用户id")],
+                                    positive_prompt: Annotated[str, Field(description="正向提示词，具体需求，例如对图片的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")],
+                                    negative_prompt: Annotated[str, Field(description="负向提示词，例如：不要有文字")],
+                                    material_id: Annotated[str, Field(description="素材id,素材id的格式为{number}_{number}，例如1_1")]):
     """
     用户指定了图片，使用image-to-image模型创建图片
-    :param user_id: 用户id
-    :param positive_prompt: 正向提示词，具体需求，例如对图片的具体要求，例如："一个穿着白色连衣裙的女孩在海边跳舞"
-    :param negative_prompt: 负向提示词，例如："不要有文字"
-    :param material_id: 素材id,素材id的格式为"{number}_{number}"，例如"1_1"
     """
+    # 一切在工具内的都为英文
+    positive_prompt = TranslatorAgent().translate(
+        from_lang="Chinese", to_lang="English", text=positive_prompt)
+    negative_prompt = TranslatorAgent().translate(
+        from_lang="Chinese", to_lang="English", text=negative_prompt)
+
     material_path = AdAgents[user_id].state.material_library.get_material_by_id(
         material_id)
     if material_path is None:

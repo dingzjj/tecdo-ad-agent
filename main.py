@@ -162,7 +162,6 @@ def create_m2v_v2_image_container(group_num: int):
             clear_btn.click(
                 fn=m2v_v2_clear, inputs=[], outputs=clear_btn_click_output)
             # 添加/删除图片 按钮点击事件
-
             container_add_btn_click_output = [
                 container_image_number]
             container_add_btn_click_output.extend(
@@ -234,7 +233,6 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                     label="素材库",
                     file_types=["image"],
                     type="filepath",
-                    height=700,
                     interactive=False,
                 )
 

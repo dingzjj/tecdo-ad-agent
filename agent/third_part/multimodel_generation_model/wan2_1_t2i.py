@@ -11,6 +11,7 @@ from requests import RequestException
 from typing import Optional
 import asyncio
 
+from agent.utils import get_time_id
 from config import conf, logger
 
 
@@ -63,7 +64,7 @@ async def run_wan2_1_t2i(
     output_images = get_images(SERVER_ADDRESS, prompt_id)
 
     # 存储
-    save_images(SERVER_ADDRESS, output_images, output_dir)
+    return save_images(SERVER_ADDRESS, output_images, output_dir)
 
 
 def get_workflow(workflow_file: str) -> dict:
@@ -277,7 +278,7 @@ def save_images(server_address: str, outputs: dict, output_dir: str = "./images"
 
             # 生成随机文件名并检查是否存在
             while True:
-                random_filename = f"{uuid.uuid4()}{ext}"
+                random_filename = f"{get_time_id()}{ext}"
                 output_path = os.path.join(output_dir, random_filename)
                 if not os.path.exists(output_path):
                     break  # 找到一个唯一的文件名，退出循环
@@ -285,7 +286,7 @@ def save_images(server_address: str, outputs: dict, output_dir: str = "./images"
             # 保存图片
             image.save(output_path)
             logger.info(f"💾 已保存图片: {output_path}")
-
+            return output_path
         except Exception as e:
             raise Wan2_1_T2IError(f"❌ 图片解码失败: {params}")
 
