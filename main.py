@@ -615,7 +615,6 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                 height=200,
                 interactive=False
             )
-
     m2v_v1_clear_btn_output = list(m2v_v1_group1_container_img)
     m2v_v1_clear_btn_output.extend(m2v_v1_group2_container_img)
     m2v_v1_clear_btn_output.extend(m2v_v1_group3_container_img)

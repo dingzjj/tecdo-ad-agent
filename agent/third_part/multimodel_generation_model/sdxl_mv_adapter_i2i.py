@@ -23,6 +23,7 @@ SERVER_ADDRESS = conf.get("comfyui.server_address")
 
 
 async def run_sdxl_mv_adapter_i2i(
+    image_path: str = "",
     positive_prompt: str = "",
     negative_prompt: Optional[str] = "",
     width: int = 768,
@@ -30,7 +31,6 @@ async def run_sdxl_mv_adapter_i2i(
     num_views: int = 4,
     steps: Optional[int] = 50,
     cfg: Optional[float] = 3.0,
-    input_image_path: str = "",
     output_image_dir: str = "",
 ):
     """
@@ -51,7 +51,7 @@ async def run_sdxl_mv_adapter_i2i(
     CLIENT_ID = str(uuid.uuid4())
 
     # 上传图片到服务器上：
-    new_input_image_path = upload_image(input_image_path)
+    new_input_image_path = upload_image(image_path)
 
     # 加载工作流
     workflow = get_workflow(WORKFILE_PATH)
@@ -255,6 +255,7 @@ def save_images(server_address: str, outputs: dict, output_dir: str = "./images"
     if not images:
         raise SDXL_MV_AdapterError("11号节点无图像数据")
     # 下载图片
+    image_list = []
     for image_info in images:
         params = {
             "filename": image_info["filename"],
@@ -280,11 +281,12 @@ def save_images(server_address: str, outputs: dict, output_dir: str = "./images"
             output_path = os.path.join(output_dir, f"{get_time_id()}{ext}")
             # 保存图片
             image.save(output_path)
-            return output_path
+            image_list.append(output_path)
         except Exception as e:
             logger.error(f"❌ 图片解码失败: {params}")
             logger.error("返回内容前200字符:", image_resp.content[:200])
             logger.error(e)
+    return image_list
 
 
 def upload_image(local_input_image_path: str = "") -> str:

@@ -44,6 +44,8 @@ start_hint = "ad agent"
 # TODO 根据用户选择的图片生成商品lora model，并使用该lora model进行创作
 # TODO 提高agent使用素材库的能力 （所有未指定的生成都先查看素材库判断是否有合适的素材）
 # TODO 多跳能力优化
+# TODO 调用能力前弹出 （提示框）
+# TODO 单点能力 ->学到 组合能力 -> 多跳能力
 
 
 class AdAgentState(BaseModel):
