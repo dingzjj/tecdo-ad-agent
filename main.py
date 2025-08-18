@@ -10,6 +10,7 @@ from modules.hook import user_input_func
 from modules.hook import m2v_v2_add_image_btn_click, m2v_v2_remove_image_btn_click
 from agent.utils import get_time_id
 from modules.hook_e_commerce_agent import bgi_submit
+from modules.hook_search import google_play_search, amazon_search
 image_container_init_number = 0
 
 # v1表示文生图生成的图片
@@ -615,6 +616,29 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                 height=200,
                 interactive=False
             )
+
+    with gr.Tab("amazon/google play search"):
+        with gr.Row():
+            with gr.Column(scale=1):
+                gr.Markdown("## google play")
+                google_play_search_input = gr.Textbox(label="google play search",
+                                                      placeholder="请输入google play搜索关键词", interactive=True)
+                google_play_search_btn = gr.Button("search")
+                google_play_search_result = gr.Dataframe(label="google play search result",
+                                                         interactive=False)
+            with gr.Column(scale=1):
+                gr.Markdown("## amazon")
+                amazon_search_input = gr.Textbox(label="amazon search",
+                                                 placeholder="请输入amazon搜索关键词", interactive=True)
+                amazon_search_btn = gr.Button("search")
+                amazon_search_result = gr.Dataframe(label="amazon search result",
+                                                    interactive=False)
+
+    google_play_search_btn.click(fn=google_play_search, inputs=[
+                                 google_play_search_input], outputs=[google_play_search_result])
+    amazon_search_btn.click(fn=amazon_search, inputs=[
+                            amazon_search_input], outputs=[amazon_search_result])
+
     m2v_v1_clear_btn_output = list(m2v_v1_group1_container_img)
     m2v_v1_clear_btn_output.extend(m2v_v1_group2_container_img)
     m2v_v1_clear_btn_output.extend(m2v_v1_group3_container_img)

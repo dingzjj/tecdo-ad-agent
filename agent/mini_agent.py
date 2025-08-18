@@ -185,7 +185,7 @@ class TranslatorAgent:
         llm = create_azure_llm()
         response = llm.invoke([
             SystemMessage(content=f"You are a translator. You are given a text in {from_lang} and you need to translate it to {
-                          to_lang}.Generally, the contents within "" or “” do not need to be translated."),
+                          to_lang}."),
             HumanMessage(
                 content=f"""{text}""")
         ])

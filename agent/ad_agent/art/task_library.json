@@ -1,0 +1,25 @@
+{
+    "advertisement_creation": {
+        "description": "在以下示例中，你被给予一个广告创作需求，你需要根据需求创作一个广告，并返回广告的图片，视频，文案。",
+        "task_list": [
+            {
+                "task_description": "根据需求创作一个广告，并返回广告的图片，视频，文案。",
+                "task_input": "创作一个宣传蓝牙耳机的广告",
+                "task_execution_process": [
+                    {
+                        "sub_task_input": "",
+                        "sub_task_output": ""
+                    },
+                    {
+                        "sub_task_input": "",
+                        "sub_task_output": ""
+                    },
+                    {
+                        "sub_task_input": "",
+                        "sub_task_output": ""
+                    }
+                ]
+            }
+        ]
+    }
+}
