@@ -1,24 +1,43 @@
 {
     "advertisement_creation": {
-        "description": "在以下示例中，你被给予一个广告创作需求，你需要根据需求创作一个广告，并返回广告的图片，视频，文案。",
+        "description": "在以下示例中，你被给予一个广告创作需求和额外信息(用户输入的图片，文档，文件)，你需要根据需求和额外信息创作一个广告，并返回广告的图片，视频，文案。",
         "task_list": [
             {
-                "task_description": "根据需求创作一个广告，并返回广告的图片，视频，文案。",
-                "task_input": "创作一个宣传蓝牙耳机的广告",
+                "task_input": "创作一个宣传该蓝牙耳机的广告，广告需要包含蓝牙耳机的特点，优势，以及使用场景。",
+                "overhead_information": {
+                    "#image_1": "蓝牙耳机的图片"
+                },
                 "task_execution_process": [
                     {
-                        "sub_task_input": "",
-                        "sub_task_output": ""
+                        "Q1": "生成该蓝牙耳机的广告脚本",
+                        "A1": "广告脚本",
+                        "overhead_information": {
+                            "#image_1": "蓝牙耳机的图片"
+                        }
                     },
                     {
-                        "sub_task_input": "",
-                        "sub_task_output": ""
+                        "Q2": "根据用户输入的图片#image_1与脚本利用图生图工具生成脚本片段的关键帧图片",
+                        "A2": "生成脚本片段的关键帧图片#image_2，#image_3，#image_4",
+                        "overhead_information": {
+                            "#image_1": "蓝牙耳机的图片",
+                            "#image_2": "脚本片段的关键帧图片1",
+                            "#image_3": "脚本片段的关键帧图片2",
+                            "#image_4": "脚本片段的关键帧图片3"
+                        }
                     },
                     {
-                        "sub_task_input": "",
-                        "sub_task_output": ""
+                        "Q3": "根据脚本片段的关键帧图片#image_2, #image_3, #image_4与脚本利用文生视频工具生成广告视频",
+                        "A3": "广告视频",
+                        "overhead_information": {
+                            "#image_1": "蓝牙耳机的图片",
+                            "#image_2": "脚本片段的关键帧图片1",
+                            "#image_3": "脚本片段的关键帧图片2",
+                            "#image_4": "脚本片段的关键帧图片3",
+                            "#video_1": "广告视频"
+                        }
                     }
-                ]
+                ],
+                "task_output": "广告的图片#image_2，#image_3，#image_4，视频#video_1"
             }
         ]
     }

@@ -1,4 +1,8 @@
 # 采用reAct框架 不断的调工具 - 直到得出结果（需要工具输出的src比较完善）
+from langchain_core.messages import convert_to_messages
+from agent.ad_agent.art.agent_modules.create_agent import creation_agent
+from langgraph_supervisor import create_supervisor
+from agent.ad_agent.art.task_library import task_library_manager
 import asyncio
 import json
 import os
@@ -50,29 +54,54 @@ start_hint = "ad agent"
 
 class AdAgentState(BaseModel):
     # 输入
-    user_id: str = Field(description="用户id")
-    chat_history: list[BaseMessage] = Field(
-        default=[], description="聊天历史,用于记录用户与agent的对话")
-    chat_and_tool_history: list[BaseMessage] = Field(
-        default=[], description="聊天和工具调用历史,用于记录用户与agent的对话和工具调用")
-    material_library: MaterialLibrary = Field(
-        default=None, description="素材库")
+    overhead_information: dict = Field(
+        default={}, description="素材库，用于记录用户输入和中途生成的图片，视频")
 
-    @root_validator(pre=True)
-    def set_material_library(cls, values):
-        user_id = values.get('user_id')
-        if user_id:
-            material_library_dir = os.path.join(
-                conf.get_path("material_library_dir"), user_id)
-            os.makedirs(material_library_dir, exist_ok=True)
-            values['material_library'] = MaterialLibrary(
-                material_library_dir=material_library_dir)
-        return values
+
+def pretty_print_message(message, indent=False):
+    pretty_message = message.pretty_repr(html=True)
+    if not indent:
+        print(pretty_message)
+        return
+
+    indented = "\n".join("\t" + c for c in pretty_message.split("\n"))
+    print(indented)
+
+
+def pretty_print_messages(update, last_message=False):
+    is_subgraph = False
+    if isinstance(update, tuple):
+        ns, update = update
+        # skip parent graph updates in the printouts
+        if len(ns) == 0:
+            return
+
+        graph_id = ns[-1].split(":")[0]
+        print(f"Update from subgraph {graph_id}:")
+        print("\n")
+        is_subgraph = True
+
+    for node_name, node_update in update.items():
+        update_label = f"Update from node {node_name}:"
+        if is_subgraph:
+            update_label = "\t" + update_label
+
+        print(update_label)
+        print("\n")
+
+        messages = convert_to_messages(node_update["messages"])
+        if last_message:
+            messages = messages[-1:]
+
+        for m in messages:
+            pretty_print_message(m, indent=is_subgraph)
+        print("\n")
 
 
 class AdAgent:
     """
     广告agent
+    无素材库的概念，只会基于用户输入的图片，文档，文件进行创作
     """
 
     def __init__(self, user_id: str):
@@ -83,33 +112,31 @@ class AdAgent:
         """
         调用agent
         :param message: 消息
-        :param overhead_information: 额外信息,用于记录用户输入的图片，文档，文件
+        :param overhead_information: {"#image_1": {"content": "图片1路径", "description": "图片1描述"}, "#video_1": {"content": "视频1路径", "description": "视频1描述"}} 额外信息,用于记录用户输入的图片，文档，文件 
         :return: 响应
         """
-        # overhead_information_list = []
-        # for key, value in overhead_information.items():
-        #     overhead_information_list.append((key, value))
 
         # task library
+        expert_knowledge_prompt = task_library_manager.task_retrieval(message)
 
-        # tool library
+        # supervisor and sub-agent
 
         # supervisor
-
-        react_agent = create_react_agent(
-            # prompt=SystemMessage(content=AD_AGENT_SYSTEM_PROMPT_cn.format(
-            #     user_id=self.user_id, material_library=self.state.material_library.get_all_material_info())),
+        supervisor = create_supervisor(
             model=create_azure_gpt5_llm(),
-            tools=[get_material_from_link, get_material_in_web, upload_material, pre_review_material_in_material_library, pre_review_material_in_user_input, create_image_by_t2i, create_video_by_t2v,
-                   create_video_by_i2v_wo_assign, create_video_by_i2v_with_assign, create_image_by_i2i_wo_assign, create_image_by_i2i_with_assign]
-        )
-        # 在chat_history头部中添加SystemMessage(content=AD_AGENT_SYSTEM_PROMPT_cn.format(user_id=self.user_id))
-        chat_history.insert(0, SystemMessage(content=AD_AGENT_SYSTEM_PROMPT_cn.format(
-            user_id=self.user_id)))
-        chat_history.append(HumanMessage(
-            content=AD_AGENT_HUMAN_PROMPT_cn.format(question=message, overhead_information=overhead_information, user_id=self.user_id)))
-        result = react_agent.invoke({"messages": chat_history})
-        return result
-
-
-AdAgents: dict[str, AdAgent] = {}
+            agents=[creation_agent],
+            prompt=(
+                "您是一名主管，负责管理一名代理人员：\n"
+                "- 一名创作代理人员。将创作相关任务分配给该代理人员\n"
+                "每次只安排一名代理人员工作，不要同时呼叫多个代理人员。\n"
+                "您自己不要做任何工作。你可以参考以下任务:\n" + expert_knowledge_prompt
+            ),
+            output_mode="full_history",
+        ).compile()
+        chat_history.insert(0, HumanMessage(content=message))
+        for chunk in supervisor.stream(
+                {
+                    "message": chat_history,
+                    "overhead_information": overhead_information
+                }):
+            pretty_print_messages(chunk, last_message=True)

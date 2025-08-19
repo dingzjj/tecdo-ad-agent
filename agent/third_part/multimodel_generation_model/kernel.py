@@ -38,7 +38,7 @@ class Gemini2_t2i(MultimodalGenerationModel):
     def __init__(self):
         self.id = "gemini2_t2i"
 
-    async def generate(self, **param) -> str:
+    async def generate(self, **param) -> tuple[str, str]:
         positive_prompt = param["positive_prompt"]
         if "negative_prompt" in param:
             negative_prompt = param["negative_prompt"]
@@ -46,7 +46,9 @@ class Gemini2_t2i(MultimodalGenerationModel):
             negative_prompt = ""
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-        return await run_gemini2_t2i(positive_prompt, conf.get_path("share_material_dir"))
+        usage_feedback = f"使用提示词{positive_prompt}生成图片"
+        output_path = await run_gemini2_t2i(positive_prompt, conf.get_path("share_material_dir"))
+        return usage_feedback, output_path
 
 
 class Gemini2_i2i(MultimodalGenerationModel):
@@ -64,7 +66,9 @@ class Gemini2_i2i(MultimodalGenerationModel):
             raise ValueError("image_path不能为空")
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-        return await run_gemini2_i2i(image_path, positive_prompt, conf.get_path("share_material_dir"))
+        usage_feedback = f"使用提示词{positive_prompt}生成图片"
+        output_path = await run_gemini2_i2i(image_path, positive_prompt, conf.get_path("share_material_dir"))
+        return usage_feedback, output_path
 
 
 class Flux_i2i(MultimodalGenerationModel):
@@ -85,7 +89,8 @@ class Flux_i2i(MultimodalGenerationModel):
         output_paths = await run_flux_i2i(image_path, positive_prompt, conf.get_path("share_material_dir"))
         if len(output_paths) == 0:
             raise ValueError("生成失败")
-        return output_paths[0]
+        usage_feedback = f"使用提示词{positive_prompt}生成图片"
+        return usage_feedback, output_paths[0]
 
 
 class Qwen_t2i(MultimodalGenerationModel):
@@ -100,7 +105,9 @@ class Qwen_t2i(MultimodalGenerationModel):
             negative_prompt = ""
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-        return await run_qwen_t2i(positive_prompt=positive_prompt, negative_prompt=negative_prompt, output_dir=conf.get_path("share_material_dir"), is_optimize_prompt_words=True)
+        usage_feedback = f"使用提示词{positive_prompt}生成图片"
+        output_path = await run_qwen_t2i(positive_prompt=positive_prompt, negative_prompt=negative_prompt, output_dir=conf.get_path("share_material_dir"), is_optimize_prompt_words=True)
+        return usage_feedback, output_path
 
 
 class Kling2_1_i2v(MultimodalGenerationModel):
@@ -121,8 +128,10 @@ class Kling2_1_i2v(MultimodalGenerationModel):
             raise ValueError("image_path不能为空")
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-        return await run_kling2_1_i2v(image_path, positive_prompt,
-                                      negative_prompt, 5, conf.get_path("share_material_dir"))
+        usage_feedback = f"使用提示词{positive_prompt}生成视频"
+        output_path = await run_kling2_1_i2v(image_path, positive_prompt,
+                                             negative_prompt, 5, conf.get_path("share_material_dir"))
+        return usage_feedback, output_path
 
 
 class Wan2_1_t2i(MultimodalGenerationModel):
@@ -137,6 +146,7 @@ class Wan2_1_t2i(MultimodalGenerationModel):
             negative_prompt = ""
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
+        usage_feedback = f"使用提示词{positive_prompt}生成视频"
         return await run_wan2_1_t2i(positive_prompt, negative_prompt, output_dir=conf.get_path("share_material_dir"))
 
 
@@ -152,7 +162,9 @@ class Veo3_t2v(MultimodalGenerationModel):
             negative_prompt = ""
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-        return await Veo3(output_dir=conf.get_path("share_material_dir")).t2v(positive_prompt, negative_prompt)
+        usage_feedback = f"使用提示词{positive_prompt}生成视频"
+        output_path = await Veo3(output_dir=conf.get_path("share_material_dir")).t2v(positive_prompt, negative_prompt)
+        return usage_feedback, output_path
 
 
 class Veo3_i2v(MultimodalGenerationModel):
@@ -170,7 +182,9 @@ class Veo3_i2v(MultimodalGenerationModel):
             raise ValueError("image_path不能为空")
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-        return await Veo3(output_dir=conf.get_path("share_material_dir")).i2v(image_path, positive_prompt, negative_prompt)
+        usage_feedback = f"使用提示词{positive_prompt}生成视频"
+        output_path = await Veo3(output_dir=conf.get_path("share_material_dir")).i2v(image_path, positive_prompt, negative_prompt)
+        return usage_feedback, output_path
 
 
 class SDXL_MV_Adapter(MultimodalGenerationModel):
@@ -188,7 +202,9 @@ class SDXL_MV_Adapter(MultimodalGenerationModel):
             raise ValueError("image_path不能为空")
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
-        return await run_sdxl_mv_adapter_i2i(param["image_path"], param["positive_prompt"], param["negative_prompt"], output_image_dir=conf.get_path("share_material_dir"))
+        usage_feedback = f"使用提示词{positive_prompt}生成图片"
+        output_path = await run_sdxl_mv_adapter_i2i(param["image_path"], param["positive_prompt"], param["negative_prompt"], output_image_dir=conf.get_path("share_material_dir"))
+        return usage_feedback, output_path
 
 
 class ModelFactory:
