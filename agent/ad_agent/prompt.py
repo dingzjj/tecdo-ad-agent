@@ -1139,18 +1139,18 @@ Production of promotional videos: The selected materials should be as simple as 
 SELECT_APPROPRIATE_MATERIAL_SYSTEM_PROMPT_SCHEMA = {
     "type": "object",
     "properties": {
-        "submaterial_id_list": {
+        "material_id_list": {
             "type": "ARRAY",
             "items": {
                 "type": "STRING",
-                "description": "submaterial ID,format: number_number,例如1_1"
+                "description": "material ID"
             },
             "minItems": 0,
             "maxItems": 3,
-            "description": "Select 0-3 suitable materials. If the matches are not found, return 0 items.submaterial ID,format: number_number,例如1_1."
+            "description": "Select 0-3 suitable materials. If the matches are not found, return 0 items."
         }
     },
-    "required": ["submaterial_id_list"]
+    "required": ["material_id_list"]
 }
 
 AD_AGENT_HUMAN_PROMPT_cn = """

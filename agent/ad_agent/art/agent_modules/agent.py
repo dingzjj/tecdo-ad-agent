@@ -1,37 +1,14 @@
 # 采用reAct框架 不断的调工具 - 直到得出结果（需要工具输出的src比较完善）
 from langchain_core.messages import convert_to_messages
-from agent.ad_agent.art.agent_modules.create_agent import creation_agent
+from agent.ad_agent.art.agent_modules.material_agent import material_agent
+from agent.ad_agent.art.agent_modules.high_level_create_agent import high_level_create_agent
+from agent.ad_agent.art.agent_modules.low_level_create_agent import low_level_create_agent
 from langgraph_supervisor import create_supervisor
 from agent.ad_agent.art.task_library import task_library_manager
-import asyncio
-import json
 import os
-import uuid
-from typing import Annotated, Dict, List
-
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from langchain_core.tools import tool
-from langgraph.prebuilt import create_react_agent
-from pydantic import BaseModel, Field, root_validator
-from pydantic.v1 import tools
-
-from MediaShield.process import process_media
-from agent.ad_agent.prompt import (
-    AD_AGENT_HUMAN_PROMPT_cn,
-    AD_AGENT_SYSTEM_PROMPT_cn,
-    REACT_AGENT_SYSTEM_PROMPT_cn,
-)
+from langchain_core.messages import BaseMessage, HumanMessage
 from agent.llm import create_azure_gpt5_llm
 from agent.material_library import MaterialLibrary
-from agent.mini_agent import (
-    GenerateVideoPromptAgent,
-    TranslatorAgent,
-)
-from agent.third_part.multimodel_generation_model.kernel import model_factory
-from agent.utils import (
-    is_image_file,
-    is_video_file,
-)
 from config import conf, logger
 
 # 设置环境变量
@@ -50,13 +27,7 @@ start_hint = "ad agent"
 # TODO 多跳能力优化
 # TODO 调用能力前弹出 （提示框）
 # TODO 单点能力 ->学到 组合能力 -> 多跳能力
-
-
-class AdAgentState(BaseModel):
-    # 输入
-    overhead_information: dict = Field(
-        default={}, description="素材库，用于记录用户输入和中途生成的图片，视频")
-
+# TODO 确认询问机制
 
 def pretty_print_message(message, indent=False):
     pretty_message = message.pretty_repr(html=True)
@@ -100,19 +71,20 @@ def pretty_print_messages(update, last_message=False):
 
 class AdAgent:
     """
-    广告agent
-    无素材库的概念，只会基于用户输入的图片，文档，文件进行创作
+    广告agent(素材库版)
     """
 
     def __init__(self, user_id: str):
         self.user_id = user_id
-        self.state = AdAgentState(user_id=user_id)
+        self.material_library = MaterialLibrary(
+            material_library_dir=os.path.join(conf.get_path("material_library_dir"), user_id))
+        self.is_interrupted = False
 
     def invoke(self, message: str, overhead_information: dict = {}, chat_history: list[BaseMessage] = []):
         """
         调用agent
         :param message: 消息
-        :param overhead_information: {"#image_1": {"content": "图片1路径", "description": "图片1描述"}, "#video_1": {"content": "视频1路径", "description": "视频1描述"}} 额外信息,用于记录用户输入的图片，文档，文件 
+        :param overhead_information: {"#image_1": {"content": "图片1路径", "description": "图片1描述"}, "#video_1": {"content": "视频1路径", "description": "视频1描述"}} 额外信息,用于记录用户输入的图片，文档，文件
         :return: 响应
         """
 
@@ -124,19 +96,29 @@ class AdAgent:
         # supervisor
         supervisor = create_supervisor(
             model=create_azure_gpt5_llm(),
-            agents=[creation_agent],
+            agents=[high_level_create_agent,
+                    material_agent, low_level_create_agent],
             prompt=(
                 "您是一名主管，负责管理一名代理人员：\n"
-                "- 一名创作代理人员。将创作相关任务分配给该代理人员\n"
+                "- 一名高级创作代理人员。将广告，宣传短片等大型创作任务分配给该代理人员\n"
+                "- 一名高级素材代理人员。对需使用的素材进行搜索，上传，预审等任务分配给该代理人员\n"
+                "- 一名低级创作代理人员。将单个图片，单个视频创作任务分配给该代理人员\n"
                 "每次只安排一名代理人员工作，不要同时呼叫多个代理人员。\n"
                 "您自己不要做任何工作。你可以参考以下任务:\n" + expert_knowledge_prompt
             ),
             output_mode="full_history",
+            supervisor_name="supervisor"
         ).compile()
-        chat_history.insert(0, HumanMessage(content=message))
-        for chunk in supervisor.stream(
-                {
-                    "message": chat_history,
-                    "overhead_information": overhead_information
-                }):
+
+        chat_history.append(HumanMessage(content=message))
+        # Create state with material library and user_id
+        state = {
+            "message": chat_history,
+            "overhead_information": overhead_information,
+            "user_id": self.user_id,
+        }
+
+        for chunk in supervisor.stream(state):
             pretty_print_messages(chunk, last_message=True)
+
+        return chunk

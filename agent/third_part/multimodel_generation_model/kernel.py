@@ -1,3 +1,5 @@
+from langchain_core.messages import SystemMessage, HumanMessage
+from agent.llm import create_azure_gpt5_llm
 from agent.third_part.multimodel_generation_model.sdxl_mv_adapter_i2i import run_sdxl_mv_adapter_i2i
 from agent.third_part.multimodel_generation_model.wan2_1_t2i import run_wan2_1_t2i
 from agent.third_part.multimodel_generation_model.qwen_t2i import run_qwen_t2i
@@ -7,7 +9,7 @@ from agent.third_part.multimodel_generation_model.veo3 import Veo3
 from agent.third_part.multimodel_generation_model.kling2_1_i2v import run_kling2_1_i2v
 from agent.third_part.multimodel_generation_model.flux_i2i import run_flux_i2i
 from agent.llm import get_gemini_multimodal_model
-from agent.third_part.prompt import CHOOSE_MODEL_SYSTEM_PROMPT, CHOOSE_MODEL_RESPONSE_SCHEMA
+from agent.third_part.multimodel_generation_model.prompt import CHOOSE_MODEL_SYSTEM_PROMPT_en, CHOOSE_MODEL_RESPONSE_SCHEMA, SUPPLY_REQUIRE_SYSTEM_PROMPT
 import json
 from translate import Translator
 from typing import Literal
@@ -226,34 +228,61 @@ class ModelFactory:
             "veo3_i2v": Veo3_i2v(),
             "sdxl_mv_adapter_i2i": SDXL_MV_Adapter(),
         }
+        try:
+            with open(conf.get_path("models_file.en"), "r", encoding="utf-8") as f:
+                models_info = json.load(f)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"❌ Error in reading model file: {e}")
+        self.models_info_en = models_info
+        try:
+            with open(conf.get_path("models_file.zh"), "r", encoding="utf-8") as f:
+                models_info = json.load(f)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"❌ Error in reading model file: {e}")
+        self.models_info_zh = models_info
 
     def get_model_by_id(self, model_id: str) -> MultimodalGenerationModel:
         return self.models[model_id]
 
-    def choose_model_by_specific_function(self, require: str, specific_function: Literal["text to image", "image to image", "text to video", "image to video"]) -> str:
-        # 首先通过specific_function对模型进行筛选
-        try:
-            with open(conf.get_path("models_file"), "r", encoding="utf-8") as f:
-                models = json.load(f)
-        except FileNotFoundError as e:
-            raise FileNotFoundError(f"❌ Error in reading model file: {e}")
-
+    def return_supply_require(self, require: str, specific_function: Literal["text to image", "image to image", "text to video", "image to video"]) -> str:
+        """返回用户一个询问请求，目的是指引客户对需求进行补充"""
         filtered_models = []
 
         # 遍历 models 字典中的所有项
-        for model_name, model_list in models.items():
+        for model_name, model_list in self.models_info_zh.items():
             # 遍历每一个模型列表中的项
             for model in model_list:
                 # 如果模型的 application 匹配 specific_function，则添加到结果列表
                 if model["application"] == specific_function:
                     filtered_models.append(model)
 
-        models = filtered_models
-        logger.info(
-            f"{specific_function} -> filtered_models:{filtered_models}")
+        llm = create_azure_gpt5_llm()
+        response = llm.invoke([
+            SystemMessage(
+                content=SUPPLY_REQUIRE_SYSTEM_PROMPT.format(
+                    models=str(filtered_models))),
+            HumanMessage(
+                content=f"用户需求为{require}")
+        ])
+        ask_question = response.content
+        return ask_question
+
+    def choose_model_by_specific_function(self, require: str, specific_function: Literal["text to image", "image to image", "text to video", "image to video"]) -> str:
+        # 首先通过specific_function对模型进行筛选
+
+        filtered_models = []
+
+        # 遍历 models 字典中的所有项
+        for model_name, model_list in self.models_info_en.items():
+            # 遍历每一个模型列表中的项
+            for model in model_list:
+                # 如果模型的 application 匹配 specific_function，则添加到结果列表
+                if model["application"] == specific_function:
+                    filtered_models.append(model)
+
         multimodal_model = get_gemini_multimodal_model(
-            system_prompt=CHOOSE_MODEL_SYSTEM_PROMPT.format(
-                models=str(models)), response_schema=CHOOSE_MODEL_RESPONSE_SCHEMA)
+            system_prompt=CHOOSE_MODEL_SYSTEM_PROMPT_en.format(
+                models=str(filtered_models)), response_schema=CHOOSE_MODEL_RESPONSE_SCHEMA)
         # 询问模型
         try:
             response = multimodal_model.generate_content(
@@ -293,7 +322,7 @@ class ModelFactory:
             raise FileNotFoundError(f"❌ Error in reading model file: {e}")
 
         multimodal_model = get_gemini_multimodal_model(
-            system_prompt=CHOOSE_MODEL_SYSTEM_PROMPT.format(
+            system_prompt=CHOOSE_MODEL_SYSTEM_PROMPT_en.format(
                 models=str(models)), response_schema=CHOOSE_MODEL_RESPONSE_SCHEMA)
 
         # 询问模型

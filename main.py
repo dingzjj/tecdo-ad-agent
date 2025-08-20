@@ -5,10 +5,9 @@ import gradio as gr
 from agent.third_part.i2v import action_types
 from modules.hook import m2v_v1_generate, m2v_v1_clear, m2v_v2_clear
 from modules.hook_m2v import m2v_v2_generate, m2v_v2_video_stitching
-from modules.hook_ad_agent import send_message_to_ad_agent
+from modules.hook_ad_agent import send_message_to_art_ad_agent
 from modules.hook import user_input_func
 from modules.hook import m2v_v2_add_image_btn_click, m2v_v2_remove_image_btn_click
-from agent.utils import get_time_id
 from modules.hook_e_commerce_agent import bgi_submit
 from modules.hook_search import google_play_search, amazon_search
 image_container_init_number = 0
@@ -654,7 +653,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
         outputs=[m2v_v1_video1, m2v_v1_video2, m2v_v1_video3])
 
     ad_agent_user_input.submit(fn=user_input_func, inputs=[ad_agent_user_input, chatbot], outputs=[chatbot]).then(
-        fn=send_message_to_ad_agent, inputs=[user_id, ad_agent_user_input, chatbot], outputs=[ad_agent_user_input, chatbot, ad_agent_material_library])
+        fn=send_message_to_art_ad_agent, inputs=[user_id, ad_agent_user_input, chatbot], outputs=[ad_agent_user_input, chatbot, ad_agent_material_library])
     # ad_agent_file_explorer.change(
     #     fn=change_file, inputs=[ad_agent_file_explorer], outputs=[video_display, image_display])
 
@@ -681,4 +680,4 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
         bgi_product_gallery_zm, bgi_product_gallery_bm, bgi_product_gallery_sm, bgi_product_gallery_xm, bgi_product_gallery_lm, bgi_product_gallery_rm, bgi_product_topic_input, bgi_modification_scope_select, bgi_custom_requirements_input, bgi_output_images_num_input], outputs=[bgi_result_gallery])
 
 demo.queue(max_size=20, default_concurrency_limit=5)
-demo.launch(server_name="0.0.0.0", server_port=6012, share=False)
+demo.launch(server_name="0.0.0.0", server_port=6003, share=False)

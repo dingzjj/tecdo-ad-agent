@@ -342,24 +342,3 @@ Assistant: {
 ACTION_TYPES_CLASSIFIER_HUMAN_PROMPT_en = """
 {{"input_text" : "{input_text}", "categories" : {categories} }}
 """
-
-
-CHOOSE_MODEL_SYSTEM_PROMPT = """
-You are a text analysis robot. 
-Based on the following model reference text and user requirement description, 
-and in accordance with the actual application situation, select the most suitable generation model.
-You only need to return the 'id' of the model which you choose.
-You can only choose from the following models:
-{models}
-"""
-
-CHOOSE_MODEL_RESPONSE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "model_id": {
-            "type": "string",
-            "description": "模型ID"
-        }
-    },
-    "required": ["model_id"]
-}
