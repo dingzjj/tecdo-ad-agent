@@ -89,18 +89,20 @@ class MaterialLibrary(BaseModel):
         """
         return self.material_list[id]
 
-    def append_material_without_analysis(self, material_path: str, title: str, description: str, link: str = ""):
+    def append_material_without_analysis(self, material_path: str, title: str, description: str, link: str = "", id=None):
         """
         添加素材，不进行分析
         :param material: 素材
         """
-        material_id = self.get_id()
+        if id is None:
+            material_id = self.get_id()
+        else:
+            material_id = id
         # 将其拷贝到material_library_dir中
 
         new_material_path = os.path.join(
             self.material_library_dir, f"{str(material_id)}.{material_path.split('.')[-1]}")
-        shutil.copy(material_path, os.path.join(
-            self.material_library_dir, new_material_path))
+        shutil.copy(material_path,  new_material_path)
         material = Material(
             id=str(material_id),
             material_path=new_material_path,
@@ -113,17 +115,19 @@ class MaterialLibrary(BaseModel):
         logger.info(f"append material: {material_id}")
         return material_id
 
-    def append_material_with_analysis(self, material_path: str, title: str, description: str, link: str = "", analysis_result: str = None):
+    def append_material_with_analysis(self, material_path: str, title: str, description: str, link: str = "", analysis_result: str = None, id=None):
         """
         添加素材，进行分析
         :param material: 素材
         """
-        material_id = self.get_id()
+        if id is None:
+            material_id = self.get_id()
+        else:
+            material_id = id
         # 将其拷贝到material_library_dir中
         new_material_path = os.path.join(
             self.material_library_dir, f"{str(material_id)}.{material_path.split('.')[-1]}")
-        shutil.copy(material_path, os.path.join(
-            self.material_library_dir, new_material_path))
+        shutil.copy(material_path, new_material_path)
         material = Material(
             id=str(material_id),
             material_path=new_material_path,
@@ -166,7 +170,7 @@ class MaterialLibrary(BaseModel):
         content = json.loads(response.candidates[0].content.parts[0].text)
         logger.info(f"require: {require}, now material_library:{
                     material_library_info}, select_appropriate_material: {content["material_id_list"]}")
-        return content["material_id_list"]
+        return f"素材库中符合需求的素材id列表为: {content['material_id_list']}"
 
     async def crawl_material_by_link(self, link: str):
         """

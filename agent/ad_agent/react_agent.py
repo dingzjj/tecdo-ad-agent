@@ -18,7 +18,7 @@ from agent.ad_agent.prompt import (
     REACT_AGENT_SYSTEM_PROMPT_cn,
 )
 from agent.llm import create_azure_gpt5_llm
-from agent.material_library import MaterialLibrary
+from agent.ad_agent.art.material_library import MaterialLibrary, material_librarys
 from agent.mini_agent import (
     GenerateVideoPromptAgent,
     TranslatorAgent,

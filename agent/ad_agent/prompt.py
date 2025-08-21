@@ -92,6 +92,9 @@ ANALYSE_IMAGE_HUMAN_PROMPT_en = """
 Refer to the product information, analyze the picture, and provide an overall composition of the picture.
 Product information: {product}
 """
+ANALYSE_IMAGE_HUMAN_PROMPT_en_without_product = """
+analyze the picture, and provide an overall composition of the picture.
+"""
 
 ANALYSE_IMAGE_RESPONSE_SCHEMA = {
     "type": "object",
@@ -101,6 +104,15 @@ ANALYSE_IMAGE_RESPONSE_SCHEMA = {
         "pictorial information"
     ]
 }
+ANALYSE_IMAGE_RESPONSE_SCHEMA_without_product = {
+    "type": "object",
+    "properties": {
+        "pictorial information": {"type": "STRING", "description": "an overall composition of the picture"},
+    }, "required": [
+        "pictorial information"
+    ]
+}
+
 
 CREATE_VIDEO_PROMPT_LIMIT_cn = """
 - 达到展示商品的目的

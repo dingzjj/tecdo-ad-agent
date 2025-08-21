@@ -1,4 +1,6 @@
 
+from agent.ad_agent.prompt import ANALYSE_IMAGE_HUMAN_PROMPT_en_without_product, ANALYSE_IMAGE_RESPONSE_SCHEMA_without_product
+from typing import Optional
 from agent.llm import create_azure_gpt5_llm
 import re
 from agent.llm import create_azure_llm
@@ -148,7 +150,7 @@ class AnalyseImageAgent:
 
 class AnalyseMaterialAgent:
 
-    async def analyse_material(self, product: str, material_path: str, source: Literal["web", "local"]) -> str:
+    async def analyse_material(self,  material_path: str, source: Literal["web", "local"], product: Optional[str] = None) -> str:
 
         if source == "web":
             response = requests.get(material_path)
@@ -161,17 +163,28 @@ class AnalyseMaterialAgent:
         if mime_type is None:
             # 如果无法猜测，默认为 image/jpeg
             mime_type = "image/jpeg"
+        if product is None:
+            gemini_generative_model = get_gemini_multimodal_model(
+                system_prompt=ANALYSE_IMAGE_SYSTEM_PROMPT_en,
+                response_schema=ANALYSE_IMAGE_RESPONSE_SCHEMA_without_product)
+            response = gemini_generative_model.generate_content(
+                [
+                    ANALYSE_IMAGE_HUMAN_PROMPT_en_without_product,
+                    Part.from_data(material_data, mime_type=mime_type)
+                ]
+            )
+        else:
+            gemini_generative_model = get_gemini_multimodal_model(
+                system_prompt=ANALYSE_IMAGE_SYSTEM_PROMPT_en,
+                response_schema=ANALYSE_IMAGE_RESPONSE_SCHEMA)
+            response = gemini_generative_model.generate_content(
+                [
+                    ANALYSE_IMAGE_HUMAN_PROMPT_en_without_product.format(
+                        product=product),
+                    Part.from_data(material_data, mime_type=mime_type)
+                ]
+            )
 
-        gemini_generative_model = get_gemini_multimodal_model(
-            system_prompt=ANALYSE_IMAGE_SYSTEM_PROMPT_en,
-            response_schema=ANALYSE_IMAGE_RESPONSE_SCHEMA)
-
-        response = gemini_generative_model.generate_content(
-            [
-                ANALYSE_IMAGE_HUMAN_PROMPT_en.format(product=product),
-                Part.from_data(material_data, mime_type=mime_type)
-            ]
-        )
         content = response.candidates[0].content.parts[0].text
         content = json.loads(content)
         return content["pictorial information"]

@@ -200,11 +200,12 @@ def create_v1_image_container(group_num: int):
 
 
 with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
-    is_end = gr.State(True)
     m2v_v1_group_number = gr.State(3)
     m2v_v1_group_img_container_number = gr.State(5)
 
     with gr.Tab("ad agent"):
+        user_material_id = gr.State(1)
+
         with gr.Row():
             # with gr.Column(scale=1):
             #     gr.Markdown("## 会话管理")
@@ -653,7 +654,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
         outputs=[m2v_v1_video1, m2v_v1_video2, m2v_v1_video3])
 
     ad_agent_user_input.submit(fn=user_input_func, inputs=[ad_agent_user_input, chatbot], outputs=[chatbot]).then(
-        fn=send_message_to_art_ad_agent, inputs=[user_id, ad_agent_user_input, chatbot], outputs=[ad_agent_user_input, chatbot, ad_agent_material_library])
+        fn=send_message_to_art_ad_agent, inputs=[user_id, ad_agent_user_input, chatbot, user_material_id], outputs=[ad_agent_user_input, chatbot, ad_agent_material_library, user_material_id])
     # ad_agent_file_explorer.change(
     #     fn=change_file, inputs=[ad_agent_file_explorer], outputs=[video_display, image_display])
 
