@@ -78,17 +78,6 @@
             ]
         }
     ],
-    "sdxl": [
-        {
-            "id": "sdxl_mv_adapter_i2i",
-            "application": "image to image",
-            "features": [
-                "Generate multi-perspective images",
-                "No prompt words are required"
-            ],
-            "defect": []
-        }
-    ],
     "KLing 2.1": [
         {
             "id": "kling2_1_i2v",

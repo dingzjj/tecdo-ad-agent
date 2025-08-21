@@ -38,15 +38,23 @@ def upload_material(config: RunnableConfig):
     user_id = config["configurable"]["user_id"]
     overhead_information = config["configurable"]["overhead_information"]
     for key, value in overhead_information.items():
-        if key.startswith("image_"):
+        material_path = value["content"]
+        # 根据后缀判断素材类型
+        if material_path.endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")):
             material_librarys[user_id].append_material_without_analysis(
-                material_path=value["content"], title="用户上传的图片", description="用户上传的图片")
-        elif key.startswith("video_"):
+                material_path=material_path, title="用户上传的图片")
+        # 假如文件是pdf等等文件结尾的，则将其已pdf_{number}加入到overhead_information中
+        elif material_path.endswith((".pdf", ".docx", ".doc", ".txt", ".md", ".csv", ".xls", ".xlsx", ".json")):
             material_librarys[user_id].append_material_without_analysis(
-                material_path=value["content"], title="用户上传的视频", description="用户上传的视频")
-        elif key.startswith("other_"):
+                material_path=material_path, title="用户上传的文档")
+        elif material_path.endswith((".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv")):
             material_librarys[user_id].append_material_without_analysis(
-                material_path=value["content"], title="用户上传的其他文件", description="用户上传的其他文件")
+                material_path=material_path, title="用户上传的视频")
+        # 假如文件是其他文件结尾的，则将其已file_{number}加入到overhead_information中
+        else:
+            material_librarys[user_id].append_material_without_analysis(
+                material_path=material_path, title="用户上传的其他文件")
+
     return "素材上传成功"
 
 
@@ -66,7 +74,7 @@ def get_material_in_web(keyword: Annotated[str, Field(description="关键词")],
 
 
 @tool
-def pre_review_material_in_material_library(material_id: Annotated[str, Field(description="素材id,素材id的格式为{number}_{number}，例如1_1")],
+def pre_review_material_in_material_library(material_id: Annotated[str, Field(description="需要预审的素材id,素材库中的素材id的格式为{number}例如1，用户上传的素材id的格式为#{number}例如#1")],
                                             config: RunnableConfig):
     """
     预审素材,预审素材库中的素材，
@@ -102,7 +110,7 @@ def get_material_in_material_library(require: Annotated[str, Field(description="
 
 
 @tool
-def pre_review_material_in_user_input(material_id_list: Annotated[list[str], Field(description="需要进行预审的素材id列表,素材库中的素材id的格式为{number}例如1，用户上传的素材id的格式为{image_number}例如image_1")],
+def pre_review_material_in_user_input(material_id_list: Annotated[list[str], Field(description="需要进行预审的素材id列表,素材库中的素材id的格式为{number}例如1，用户上传的素材id的格式为#{number}例如#1")],
                                       config: RunnableConfig):
     """
     预审素材，既可以预审用户输入的图片，文档，文件,也可以对素材库中的素材进行预审，一般来说用户有进行图片上传并且提出预审需求时会对用户上传的图片进行预审
@@ -165,3 +173,15 @@ def pre_review_material_in_user_input(material_id_list: Annotated[list[str], Fie
                     result += f"素材库中的素材{material_id}预审成功,预审结果为{pre_review_result}\n"
 
     return result
+
+
+def return_material_agent(user_id: str):
+    return  create_react_agent(
+            name="material_agent",
+            model=create_azure_gpt5_llm(),
+            tools=[get_material_from_link, upload_material, get_material_in_web,
+                   pre_review_material_in_material_library, pre_review_material_in_user_input],
+            prompt=(
+                "你是一个素材管理代理,你负责根据用户的需求管理素材,例如根据用户的需求从网上获取素材，上传素材，预审素材等"
+            ),
+        )

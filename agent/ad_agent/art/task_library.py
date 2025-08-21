@@ -88,6 +88,10 @@ class TaskLibraryManager:
         return result
 
     def task_retrieval(self, query: str):
+        """根据任务返回专家知识"""
+        pass
+
+    def return_senior_create_agent_expert_knowledge_prompt(self):
         return self.get_prompt_from_task_library(self.task_library_list)
 
 

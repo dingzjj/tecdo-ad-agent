@@ -61,13 +61,16 @@ class Material(BaseModel):
         self.is_analyzed = True
 
 
-class MaterialLibrary(BaseModel):
+class MaterialLibrary:
     """
     素材库
     """
-    material_list: Dict[str, Material] = Field(default={}, description="id:素材")
-    next_id: int = Field(default=1, description="下一个素材id")
-    material_library_dir: str = Field(description="素材库地址")
+
+    def __init__(self, material_library_dir: str):
+        self.material_list: Dict[str, Material] = {}
+        self.next_id: int = 1
+        self.material_library_dir: str = material_library_dir
+        os.makedirs(material_library_dir, exist_ok=True)
 
     def get_id(self):
         id = self.next_id
@@ -78,7 +81,7 @@ class MaterialLibrary(BaseModel):
         # 返回Json[str格式] - 为llm提供素材库信息
         all_material_info = {}
         for material_id, material in self.material_list.items():
-            all_material_info[f"{material_id}"] = material.analysis_result
+            all_material_info[material_id] = material.analysis_result
         return json.dumps(all_material_info, ensure_ascii=False)
 
     def get_material_by_id(self, id: str) -> Optional[Material]:
@@ -89,30 +92,30 @@ class MaterialLibrary(BaseModel):
         """
         return self.material_list[id]
 
-    def append_material_without_analysis(self, material_path: str, title: str, description: str, link: str = "", id=None):
+    def append_material_without_analysis(self, material_path: str, title: str, link: str = "", id=None):
         """
         添加素材，不进行分析
         :param material: 素材
         """
+        assert isinstance(material_path, str),"material_path must be string"
         if id is None:
-            material_id = self.get_id()
+            material_id = str(self.get_id())
         else:
             material_id = id
         # 将其拷贝到material_library_dir中
 
         new_material_path = os.path.join(
-            self.material_library_dir, f"{str(material_id)}.{material_path.split('.')[-1]}")
+            self.material_library_dir, f"{material_id}.{material_path.split('.')[-1]}")
         shutil.copy(material_path,  new_material_path)
         material = Material(
-            id=str(material_id),
+            id=material_id,
             material_path=new_material_path,
             title=title,
             link=link,
             analysis_result=None,
             is_analyzed=False
         )
-        self.material_list[material_id] = material
-        logger.info(f"append material: {material_id}")
+        self.append_material(material)
         return material_id
 
     def append_material_with_analysis(self, material_path: str, title: str, description: str, link: str = "", analysis_result: str = None, id=None):
@@ -136,14 +139,14 @@ class MaterialLibrary(BaseModel):
             analysis_result=analysis_result,
             is_analyzed=True
         )
-        self.material_list[material_id] = material
-        logger.info(f"append material: {material_id}")
+        self.append_material(material)
 
     def append_material(self, material: Material):
         """
         添加素材
         :param material: 素材
         """
+        assert isinstance(material.id, str)
         self.material_list[material.id] = material
         logger.info(f"append material: {material}")
 
@@ -247,20 +250,14 @@ class MaterialLibrary(BaseModel):
         返回素材列表
         :return: 素材列表
         """
-        material_list = []
+        return_material_list = []
 
         for material_id, material in self.material_list.items():
-            """
-            # v1 - 只要有图片就下载下来
-        img_path_list: dict[int, str] = Field(
-            default={}, description="id:(图片链接(in local))")
-        # v2
-        img_content_list: dict[int, tuple[str, str]] = Field(
-        default={}, description="id:(图片链接(in local),图片内容)")
-            """
-            material_list.append((os.path.join(
-                self.material_library_dir, material.material_path), material_id))
-        return material_list
+            material_id = str(material_id)
+            if not material_id.startswith("#"):
+                return_material_list.append((os.path.join(
+                    self.material_library_dir, material.material_path), material_id))
+        return return_material_list
 
     async def crawl_material_in_web(self, keyword: str) -> list[Material]:
         """

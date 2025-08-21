@@ -205,7 +205,7 @@ class SDXL_MV_Adapter(MultimodalGenerationModel):
         if positive_prompt is None:
             raise ValueError("positive_prompt不能为空")
         usage_feedback = f"使用提示词{positive_prompt}生成图片"
-        output_path = await run_sdxl_mv_adapter_i2i(param["image_path"], param["positive_prompt"], param["negative_prompt"], output_image_dir=conf.get_path("share_material_dir"))
+        output_path = await run_sdxl_mv_adapter_i2i(param["image_path"], param["positive_prompt"], negative_prompt, output_image_dir=conf.get_path("share_material_dir"))
         return usage_feedback, output_path
 
 

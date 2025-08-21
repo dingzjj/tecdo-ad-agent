@@ -195,20 +195,14 @@ class TranslatorAgent:
         self.model = "gpt-4o-mini"
 
     def translate(self, from_lang: str, to_lang: str, text: str) -> str:
-        llm = create_azure_llm()
+        llm = create_azure_llm(name="translator")
         response = llm.invoke([
             SystemMessage(content=f"You are a translator. You are given a text in {from_lang} and you need to translate it to {
                           to_lang}."),
-            HumanMessage(
-                content=f"""{text}""")
+            HumanMessage(content=f"{text}")
         ])
         # 将有""或“”的内容替换回来
         result = response.content
-        # 正则表达式匹配双引号或中文引号中的内容
-        pattern = r'["“”](.*?)["”]'
-        # 替换 B 中双引号或中文引号中的内容为 A
-        result = re.sub(pattern, lambda m: text, result)
-
         return result
 
 

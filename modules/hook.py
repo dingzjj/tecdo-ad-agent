@@ -10,7 +10,6 @@ import gradio as gr
 
 from agent.utils import get_time_id
 from agent.ad_agent.m2v_workflow import ainvoke_m2v_workflow
-from agent.ad_agent.react_agent import start_hint
 from config import conf
 from pojo import user_id
 
@@ -25,6 +24,8 @@ DEFAULT_VIDEO_FILENAME = "video_url_v1.mp4"
 # 文件类型映射
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")
 VIDEO_EXTENSIONS = (".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv")
+
+start_hint = "ad agent"
 
 
 def load_app(user_id: str) -> Tuple[str, List[gr.ChatMessage]]:

@@ -22,6 +22,8 @@ from agent.ad_agent.art.agent_modules.agent import AdAgent
 
 from agent.ad_agent.art.material_library import material_librarys
 
+AdAgents: dict[str, AdAgent] = {}
+
 
 def send_message_to_art_ad_agent(user_id, user_input, chatbot, user_material_id):
     chat_history = gradio_chat_message_list2chat_message_list(chatbot)
@@ -64,8 +66,10 @@ def send_message_to_art_ad_agent(user_id, user_input, chatbot, user_material_id)
             }
             user_material_id += 1
 
-    result = AdAgent(user_id).invoke(
-        message=question, overhead_information=overhead_information, chat_history=chat_history)
+    if user_id not in AdAgents:
+        AdAgents[user_id] = AdAgent(user_id)
+    result = AdAgents[user_id].invoke(
+        message=question, overhead_information=overhead_information)
     # 假如返回的是中断，则返回中断信息
     # 假如上次中断了，则这次视为对上次中断的恢复
     chatbot.append(gr.ChatMessage(

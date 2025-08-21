@@ -6,12 +6,6 @@ import os
 import torch
 from agent.third_part.ffmpeg import get_video_resolution
 
-# 检查是否支持 CUDA
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-# 加载模型（可以改为 large、base、medium 等）
-model = whisper.load_model("small", device=device)
-
 
 def format_timestamp(seconds) -> str:
     """格式化时间戳为 SRT 格式"""
@@ -32,6 +26,11 @@ def transcribe_audio_to_sentences(audio_path: str, output_dir: str = None) -> st
     if output_dir is None:
         output_dir = "./whisper_output"
     os.makedirs(output_dir, exist_ok=True)
+    # 检查是否支持 CUDA
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # 加载模型（可以改为 large、base、medium 等）
+    model = whisper.load_model("small", device=device)
 
     result = model.transcribe(audio_path)
 
@@ -58,6 +57,11 @@ def transcribe_audio_to_words(audio_path: str, output_dir: str) -> str:
     :param output_path: 生成的 .srt 文件的目录
     :return: 生成的 .srt 文件路径
     """
+    # 检查是否支持 CUDA
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # 加载模型（可以改为 large、base、medium 等）
+    model = whisper.load_model("small", device=device)
 
     result = model.transcribe(audio_path, word_timestamps=True)
     srt_path = os.path.join(output_dir, f"audio_words.srt")

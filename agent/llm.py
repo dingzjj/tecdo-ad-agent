@@ -15,16 +15,28 @@ from openai import OpenAI
 from langchain.prompts import SystemMessagePromptTemplate, ChatPromptTemplate
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
+from typing import Optional
 
-def create_azure_llm() -> AzureChatOpenAI:
+
+def create_azure_llm(name: Optional[str] = None) -> AzureChatOpenAI:
     # 配置 Azure OpenAI 客户端
-    return AzureChatOpenAI(
-        api_key=conf.get("Azure_gpt.api_key"),  # API 密钥
-        azure_endpoint=conf.get("Azure_gpt.azure_endpoint"),  # 替换为你的端点
-        model=conf.get("Azure_gpt.model_name"),  # 选择模型
-        deployment_name=conf.get("Azure_gpt.deployment_name"),  # 替换为你的部署名称
-        api_version=conf.get("Azure_gpt.api_version"),  # API 版本
-    )
+    if name:
+        return AzureChatOpenAI(
+            name=name,
+            api_key=conf.get("Azure_gpt.api_key"),  # API 密钥
+            azure_endpoint=conf.get("Azure_gpt.azure_endpoint"),  # 替换为你的端点
+            model=conf.get("Azure_gpt.model_name"),  # 选择模型
+            deployment_name=conf.get("Azure_gpt.deployment_name"),  # 替换为你的部署名称
+            api_version=conf.get("Azure_gpt.api_version"),  # API 版本
+        )
+    else:
+        return AzureChatOpenAI(
+            api_key=conf.get("Azure_gpt.api_key"),  # API 密钥
+            azure_endpoint=conf.get("Azure_gpt.azure_endpoint"),  # 替换为你的端点
+            model=conf.get("Azure_gpt.model_name"),  # 选择模型
+            deployment_name=conf.get("Azure_gpt.deployment_name"),  # 替换为你的部署名称
+            api_version=conf.get("Azure_gpt.api_version"),  # API 版本
+        )
 
 
 def create_azure_gpt5_llm() -> AzureChatOpenAI:
