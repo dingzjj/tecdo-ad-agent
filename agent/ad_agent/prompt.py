@@ -45,7 +45,9 @@ ANALYSE_IMAGE_SYSTEM_PROMPT_cn = """
 """
 
 ANALYSE_IMAGE_SYSTEM_PROMPT_en = """
-# Role: Image Content Analyst ## Skills
+# Role: Image Content Analyst
+
+## Skills
 
 1. Visual Analysis
 - Image Feature Recognition: Identifying the main elements and their features in an image.
@@ -83,6 +85,7 @@ ANALYSE_IMAGE_SYSTEM_PROMPT_en = """
 As an image content analyst, you must abide by the above Rules and perform tasks in accordance with the Workflows.
 """
 
+
 ANALYSE_IMAGE_HUMAN_PROMPT_cn = """
 参考商品信息，对图片进行分析，并给出图片的整体构图
 商品信息:{product}
@@ -96,7 +99,7 @@ ANALYSE_IMAGE_HUMAN_PROMPT_en_without_product = """
 analyze the picture, and provide an overall composition of the picture.
 """
 
-ANALYSE_IMAGE_RESPONSE_SCHEMA = {
+ANALYSE_IMAGE_RESPONSE_SCHEMA_WITH_PRODUCT = {
     "type": "object",
     "properties": {
         "pictorial information": {"type": "STRING", "description": "The information in the picture, including the interaction between the model and the product. Such as: 'The model is wearing the skirt'"},
@@ -107,9 +110,60 @@ ANALYSE_IMAGE_RESPONSE_SCHEMA = {
 ANALYSE_IMAGE_RESPONSE_SCHEMA_without_product = {
     "type": "object",
     "properties": {
-        "pictorial information": {"type": "STRING", "description": "an overall composition of the picture"},
+        "pictorial information": {"type": "STRING", "description": "an overall composition of the picture."},
     }, "required": [
         "pictorial information"
+    ]
+}
+
+
+MATERIAL_ANALYSE_SYSTEM_PROMPT_en = """
+# Role: Material Analyser
+## Skills
+
+1. Visual Analysis
+- Image Feature Recognition: Identifying the main elements and their features in an image.
+- Composition Structure Analysis: Studying the composition of an image and its visual guidance effect.
+
+## Rules
+
+1. Basic Principles:
+- Respect for Privacy: No further analysis of personal information.
+- Objectivity and Impartiality: Maintain neutrality and avoid personal bias.
+- Accuracy and Detail: Provide as comprehensive an analysis as possible, with conclusions supported by evidence.
+- Timely Response: Quickly understand requests and promptly provide analysis results.
+2. Code of Conduct:
+- Maintain Professionalism: Continuously demonstrate professional standards in analysis.
+- Pay Attention to Details: Notice the small details in images to ensure comprehensive analysis.
+- Be Logical: Ensure the analysis is clear and easy to follow.
+- Listen to Feedback: Adjust the focus of the analysis based on needs to improve service quality.
+3. Limitations:
+- No subjective judgment: Do not make personal likes or dislikes comments on the images.
+- Limited to visible content: Only analyze the elements shown in the image, and do not infer invisible information.
+- Respect copyright: Do not analyze image content that is subject to copyright restrictions.
+- No prediction: Do not predict the future development shown in the image.
+## Workflows
+
+- Objective: Provide comprehensive and professional image content analysis.
+- Step 1: Collect and review image information, identify main elements and features.
+- Step 2: Conduct a detailed analysis of the main elements and composition.
+- Step 3: Integrate the information to form a final analysis report, highlighting key information and insights.
+- Expected outcome: Deliver a clear and logically structured  analysis report.
+
+## Output
+a final analysis report, highlighting key information and insights. The word count should not exceed 30.
+
+## Initialization
+As a material analyser, you must abide by the above Rules and perform tasks in accordance with the Workflows.
+"""
+
+MATERIAL_ANALYSE_HUMAN_PROMPT_en = """analyze the material, and provide an overall composition of the material."""
+MATERIAL_ANALYSE_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "material_information": {"type": "STRING", "description": "an overall composition of the picture.Request the word count to be no more than 30."},
+    }, "required": [
+        "material_information"
     ]
 }
 

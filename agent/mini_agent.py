@@ -1,4 +1,5 @@
 
+from agent.ad_agent.prompt import MATERIAL_ANALYSE_SYSTEM_PROMPT_en, MATERIAL_ANALYSE_RESPONSE_SCHEMA, MATERIAL_ANALYSE_HUMAN_PROMPT_en
 from agent.ad_agent.prompt import ANALYSE_IMAGE_HUMAN_PROMPT_en_without_product, ANALYSE_IMAGE_RESPONSE_SCHEMA_without_product
 from typing import Optional
 from agent.llm import create_azure_gpt5_llm
@@ -12,7 +13,7 @@ import requests
 import os
 from agent.llm import get_gemini_multimodal_model
 from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
-from agent.ad_agent.prompt import ANALYSE_IMAGE_SYSTEM_PROMPT_en, ANALYSE_IMAGE_RESPONSE_SCHEMA, ANALYSE_IMAGE_HUMAN_PROMPT_en
+from agent.ad_agent.prompt import ANALYSE_IMAGE_SYSTEM_PROMPT_en, ANALYSE_IMAGE_RESPONSE_SCHEMA_WITH_PRODUCT, ANALYSE_IMAGE_HUMAN_PROMPT_en
 import mimetypes
 from agent.ad_agent.prompt import SELLING_POINTS_CLASSIFIER_SYSTEM_PROMPT_en, SELLING_POINTS_CLASSIFIER_HUMAN_PROMPT_en
 from agent.ad_agent.prompt import CLASSIFIER_SYSTEM_PROMPT_en, CLASSIFIER_HUMAN_PROMPT_en
@@ -148,6 +149,34 @@ class AnalyseImageAgent:
         return content["pictorial information"]
 
 
+class MaterialAnalyserAgent:
+    async def analyse_material(self,  material_path: str, source: Literal["web", "local"]) -> str:
+
+        if source == "web":
+            response = requests.get(material_path)
+            material_data = response.content
+        elif source == "local":
+            with open(material_path, "rb") as file:
+                material_data = file.read()
+
+        mime_type, _ = mimetypes.guess_type(material_path)
+        if mime_type is None:
+            # 如果无法猜测，默认为 image/jpeg
+            mime_type = "image/jpeg"
+        gemini_generative_model = get_gemini_multimodal_model(
+            system_prompt=MATERIAL_ANALYSE_SYSTEM_PROMPT_en,
+            response_schema=MATERIAL_ANALYSE_RESPONSE_SCHEMA)
+        response = gemini_generative_model.generate_content(
+            [
+                MATERIAL_ANALYSE_HUMAN_PROMPT_en,
+                Part.from_data(material_data, mime_type=mime_type)
+            ]
+        )
+        content = response.candidates[0].content.parts[0].text
+        content = json.loads(content)
+        return content["material_information"]
+
+
 class AnalyseMaterialAgent:
 
     async def analyse_material(self,  material_path: str, source: Literal["web", "local"], product: Optional[str] = None) -> str:
@@ -176,7 +205,7 @@ class AnalyseMaterialAgent:
         else:
             gemini_generative_model = get_gemini_multimodal_model(
                 system_prompt=ANALYSE_IMAGE_SYSTEM_PROMPT_en,
-                response_schema=ANALYSE_IMAGE_RESPONSE_SCHEMA)
+                response_schema=ANALYSE_IMAGE_RESPONSE_SCHEMA_WITH_PRODUCT)
             response = gemini_generative_model.generate_content(
                 [
                     ANALYSE_IMAGE_HUMAN_PROMPT_en_without_product.format(

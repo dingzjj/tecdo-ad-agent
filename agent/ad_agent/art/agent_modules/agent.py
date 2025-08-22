@@ -1,4 +1,5 @@
 # 采用reAct框架 不断的调工具 - 直到得出结果（需要工具输出的src比较完善）
+from agent.mini_agent import MaterialAnalyserAgent
 from agent.mini_agent import TranslatorAgent
 from agent.mini_agent import AnalyseMaterialAgent
 from langchain_core.messages import AIMessage
@@ -22,10 +23,10 @@ from agent.ad_agent.art.task_library import task_library_manager
 import os
 from langchain_core.messages import BaseMessage, HumanMessage
 from agent.llm import create_azure_gpt5_llm
-from langgraph.checkpoint.memory import MemorySaver
 from agent.ad_agent.art.material_library import MaterialLibrary
 from config import conf, logger
 import asyncio
+from agent.ad_agent.art.agent_modules.store import memory_saver
 
 # 设置环境变量
 os.environ["LANGSMITH_API_KEY"] = "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"
@@ -84,9 +85,6 @@ def pretty_print_messages(update, last_message=False):
         for m in messages:
             pretty_print_message(m, indent=is_subgraph)
         print("\n")
-
-
-memory_saver = MemorySaver()
 
 
 @tool(description="将任务交给高级创作代理")
@@ -163,6 +161,8 @@ class AdAgent:
         material_librarys[user_id] = self.material_library
         self.agent_chat_history: list[BaseMessage] = []
         self.is_interrupted = False
+        # TODO supervisor不能吃到工具调用信息，只需要接收到（在Sub agent 到supervisor之间添加个消息过滤）
+        # TODO sub agent也不用接收到全部消息，过滤部分信息
         supervisor_agent = create_react_agent(
             model=create_azure_llm(),
             tools=[transfer_to_senior_create_agent,
@@ -177,12 +177,11 @@ class AdAgent:
                 "输出结果时，不要输出任何其他内容，只输出结果，不要出现代理人员相关信息"
             ),
             name="supervisor")
-        senior_create_agent_expert_knowledge_prompt = task_library_manager.return_senior_create_agent_expert_knowledge_prompt()
         supervisor = (
             StateGraph(MessagesState)
             # NOTE: `destinations` is only needed for visualization and doesn't affect runtime behavior
             .add_node(supervisor_agent, destinations=("senior_create_agent", "material_agent", "junior_create_agent", END))
-            .add_node("senior_create_agent", return_senior_create_agent(self.user_id, senior_create_agent_expert_knowledge_prompt))
+            .add_node("senior_create_agent", return_senior_create_agent())
             .add_node("material_agent", return_material_agent(self.user_id))
             .add_node("junior_create_agent", return_junior_create_agent(self.user_id))
             .add_edge(START, "supervisor")
@@ -207,7 +206,7 @@ class AdAgent:
         # 将overhead_information中的图片上传到素材库中
         for upload_material_id, upload_material_info in overhead_information.items():
             upload_material_path = upload_material_info["content"]
-            analysis_result = asyncio.run(AnalyseMaterialAgent().analyse_material(
+            analysis_result = asyncio.run(MaterialAnalyserAgent().analyse_material(
                 material_path=upload_material_path, source="local"))
             analysis_result = TranslatorAgent().translate(
                 from_lang="English", to_lang="Chinese", text=analysis_result)

@@ -24,8 +24,6 @@ import time
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from fastmcp import Client
-
 
 @tool
 async def user_input_tool(ref_content: str) -> str:

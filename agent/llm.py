@@ -39,13 +39,22 @@ def create_azure_llm(name: Optional[str] = None) -> AzureChatOpenAI:
         )
 
 
-def create_azure_gpt5_llm() -> AzureChatOpenAI:
-    return AzureChatOpenAI(
-        api_key=conf.get("gpt5.api_key"),
-        azure_endpoint=conf.get("gpt5.azure_endpoint"),
-        model=conf.get("gpt5.model_name"),
-        api_version=conf.get("gpt5.api_version")  # API 版本
-    )
+def create_azure_gpt5_llm(name: Optional[str] = None) -> AzureChatOpenAI:
+    if name:
+        return AzureChatOpenAI(
+            name=name,
+            api_key=conf.get("gpt5.api_key"),
+            azure_endpoint=conf.get("gpt5.azure_endpoint"),
+            model=conf.get("gpt5.model_name"),
+            api_version=conf.get("gpt5.api_version")  # API 版本
+        )
+    else:
+        return AzureChatOpenAI(
+            api_key=conf.get("gpt5.api_key"),
+            azure_endpoint=conf.get("gpt5.azure_endpoint"),
+            model=conf.get("gpt5.model_name"),
+            api_version=conf.get("gpt5.api_version")  # API 版本
+        )
 
 
 def chat_with_openai_in_azure(system_prompt: str, prompt: str) -> str:

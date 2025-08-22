@@ -68,6 +68,7 @@ def send_message_to_art_ad_agent(user_id, user_input, chatbot, user_material_id)
 
     if user_id not in AdAgents:
         AdAgents[user_id] = AdAgent(user_id)
+    # TODO 输出 1.任务列表，2、每个子任务 +子任务的执行结果 3.总结果
     result = AdAgents[user_id].invoke(
         message=question, overhead_information=overhead_information)
     # 假如返回的是中断，则返回中断信息
