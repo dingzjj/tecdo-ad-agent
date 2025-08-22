@@ -10,7 +10,7 @@ import base64
 import subprocess
 import requests
 from typing import Dict, Any, Literal
-
+from agent.mini_agent import RephrasePromptAgent
 from agent.exception import Veo3Error
 
 
@@ -203,9 +203,11 @@ class Veo3:
                 return video_path
             except Exception as e:
                 logger.error(f"视频生成失败: {e}")
-                time.sleep(3)
-                continue
-        raise Veo3Error(f"视频生成失败: {e}")
+                if e["code"] == 3:
+                    # 重构提示词
+                    positive_prompt = RephrasePromptAgent().rephrase_prompt(
+                        positive_prompt)
+        raise Veo3Error(f"视频生成失败")
 
     async def t2v(self, positive_prompt, negative_prompt, aspect_ratio: Literal["16:9", "9:16"] = "16:9", duration: Literal[8] = 8, resolution: Literal["1080p"] = "1080p", generate_audio=True, sample_count: int = 1, add_watermark: bool = False):
         """
@@ -253,7 +255,8 @@ class Veo3:
                 return video_path
             except Exception as e:
                 logger.error(f"视频生成失败: {e}")
-                time.sleep(3)
-                continue
-
-        raise Veo3Error(f"视频生成失败: {e}")
+                if e["code"] == 3:
+                    # 重构提示词
+                    positive_prompt = RephrasePromptAgent().rephrase_prompt(
+                        positive_prompt)
+        raise Veo3Error(f"视频生成失败")

@@ -1,17 +1,19 @@
 # 采用reAct框架 不断的调工具 - 直到得出结果（需要工具输出的src比较完善）
+from agent.ad_agent.art.agent_modules.pojo import InterruptInAdAgent
+from typing import Literal
 from agent.mini_agent import MaterialAnalyserAgent
 from agent.mini_agent import TranslatorAgent
 from agent.mini_agent import AnalyseMaterialAgent
 from langchain_core.messages import AIMessage
 from pandas.core.series import doc
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from agent.ad_agent.art.agent_modules.senior_create_agent import return_senior_create_agent
 from agent.ad_agent.art.agent_modules.material_agent import return_material_agent
 from agent.ad_agent.art.agent_modules.junior_create_agent import return_junior_create_agent
 from agent.llm import create_azure_llm
 from langgraph.graph import END
 from langgraph.prebuilt import create_react_agent
-from langgraph.types import Command
+from langgraph.types import Command, Interrupt
 from langgraph.graph import StateGraph, START, MessagesState
 from langgraph.prebuilt import InjectedState
 from langchain_core.tools import tool, InjectedToolCallId
@@ -193,7 +195,8 @@ class AdAgent:
         )
         self.supervisor = supervisor
 
-    def invoke(self, message: str, overhead_information: dict = {}):
+    def stream(self, message: str, overhead_information: dict = {}):
+        result = []
         """
         调用agent
         :param message: 消息
@@ -234,40 +237,49 @@ class AdAgent:
             messages=self.agent_chat_history)
         agent_config = {"configurable": {
             "thread_id": self.user_id, "overhead_information": overhead_information, "user_id": self.user_id}}
-        if self.is_interrupted:
-            # 中断
-            for chunk in self.supervisor.stream(Command(resume=message), config=agent_config, stream_mode="messages"):
-                # 将chunk中有用的信息加入到agent_chat_history中
-                llm_token, metadata = chunk
-                print("---------------llm_token-----------------")
-                print(llm_token)
-                print("---------------metadata-----------------")
-                print(metadata)
-                print("--------------------------------")
-                if metadata["langgraph_node"] in sub_agent_list:
-                    # 从node_value中提取有用信息
-                    self.agent_chat_history.append(llm_token)
-        else:
-            # 非中断
-            for chunk in self.supervisor.stream(state, config=agent_config, stream_mode="messages"):
-                # 将chunk中有用的信息加入到agent_chat_history中
-                llm_token, metadata = chunk
-                print("---------------llm_token-----------------")
-                print(llm_token)
-                print("---------------metadata-----------------")
-                print(metadata)
-                print("--------------------------------")
-                if metadata["langgraph_node"] in sub_agent_list:
-                    # 从node_value中提取有用信息
-                    self.agent_chat_history.append(llm_token)
+        while True:
+            if self.is_interrupted:
+                # 中断
+                for chunk in self.supervisor.stream(Command(resume=message), config=agent_config, stream_mode="messages"):
+                    # 将chunk中有用的信息加入到agent_chat_history中
+                    llm_token, metadata = chunk
+                    # print("---------------llm_token-----------------")
+                    # print(llm_token)
+                    # print("---------------metadata-----------------")
+                    # print(metadata)
+                    # print("--------------------------------")
+                    if metadata["langgraph_node"] in sub_agent_list:
+                        # 从node_value中提取有用信息
+                        self.agent_chat_history.append(llm_token)
 
-        snapshot = self.supervisor.get_state(agent_config)
-        if snapshot.next:
-            self.is_interrupted = True
-            return snapshot[-1][0].value
-        else:
-            self.is_interrupted = False
-        print("------------agent_chat_history--------------------")
-        print(self.agent_chat_history)
-        print("------------agent_chat_history--------------------")
-        return llm_token.content
+            else:
+                # 非中断
+                # 在生成计划时中断返回，在1.任务列表，2、每个子任务 +子任务的执行结果 3.总结果
+                for chunk in self.supervisor.stream(state, config=agent_config, stream_mode="messages"):
+                    # 将chunk中有用的信息加入到agent_chat_history中
+                    llm_token, metadata = chunk
+                    # print("---------------llm_token-----------------")
+                    # print(llm_token)
+                    # print("---------------metadata-----------------")
+                    # print(metadata)
+                    # print("--------------------------------")
+                    if metadata["langgraph_node"] in sub_agent_list:
+                        # 从node_value中提取有用信息
+                        self.agent_chat_history.append(llm_token)
+            with open("/data/dzj/ad_agent/agent/ad_agent/art/agent_modules/agent_chat_history.txt", "w") as f:
+                # 每个元素换行输出
+                for message in self.agent_chat_history:
+                    f.write(str(message)+"\n")
+            snapshot = self.supervisor.get_state(agent_config)
+            if isinstance(snapshot.interrupts[-1], Interrupt):
+                interrupt_message: InterruptInAdAgent = snapshot.interrupts[-1].value
+                if interrupt_message.type == "tool_call":
+                    self.is_interrupted = True
+                    return interrupt_message.message_list
+                else:
+                    message = interrupt_message.type
+                    self.is_interrupted = True
+                    yield interrupt_message.message_list
+            elif isinstance(snapshot.values["messages"][-1], AIMessage):
+                self.is_interrupted = False
+                return snapshot.values["messages"][-1].content

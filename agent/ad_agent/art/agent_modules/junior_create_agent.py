@@ -18,6 +18,9 @@ from langchain_core.tools import tool
 
 from langgraph.types import Command, interrupt
 from langchain_core.runnables import Runnable, RunnableConfig
+from agent.ad_agent.art.agent_modules.pojo import InterruptInAdAgent
+
+from langchain_core.messages import AIMessage
 
 
 @tool
@@ -29,8 +32,8 @@ def create_image_by_t2i(require: Annotated[str, Field(description="需求，具�
     # 中文
     # 根据已有模型询问风格来补充需求
 
-    more_require = interrupt(
-        model_factory.return_supply_require(require, "text to image"))
+    more_require = interrupt(InterruptInAdAgent(
+        type="tool_call", message_list=[AIMessage(content=model_factory.return_supply_require(require, "text to image"))]))
     require = require + f"and {more_require}"
     # 英文
     require = TranslatorAgent().translate(
@@ -56,8 +59,8 @@ def create_video_by_t2v(require: Annotated[str, Field(description="需求，具�
     """
     提供对视频的描述，使用text-to-video模型创建视频
     """
-    more_require = interrupt(
-        model_factory.return_supply_require(require, "text to video"))
+    more_require = interrupt(InterruptInAdAgent(
+        type="tool_call", message_list=[AIMessage(content=model_factory.return_supply_require(require, "text to video"))]))
     require = require + f"and {more_require}"
     # 一切在工具内的都为英文
     require = TranslatorAgent().translate(
@@ -81,8 +84,8 @@ def create_video_by_i2v(require: Annotated[str, Field(description="需求，具�
     """
     在需求中指定所用的图片id来生成视频，或者附加信息中有图片上传。使用image-to-video模型创建视频
     """
-    more_require = interrupt(
-        model_factory.return_supply_require(require, "text to video"))
+    more_require = interrupt(InterruptInAdAgent(
+        type="tool_call", message_list=[AIMessage(content=model_factory.return_supply_require(require, "image to video"))]))
     require = require + f"and {more_require}"
     # 一切在工具内的都为英文
     require = TranslatorAgent().translate(
@@ -125,8 +128,8 @@ def create_image_by_i2i(require: Annotated[str, Field(description="具体需求�
     在需求中指定所用的图片id来生成图片，或者附加信息中有图片上传。使用image-to-image模型创建图片
     功能：1.生成某商品的多视角图片 2.对商品图片背景进行修改
     """
-    more_require = interrupt(
-        model_factory.return_supply_require(require, "image to image"))
+    more_require = interrupt(InterruptInAdAgent(
+        type="tool_call", message_list=[AIMessage(content=model_factory.return_supply_require(require, "image to image"))]))
     require = require + f",{more_require}"
     # 一切在工具内的都为英文
     require = TranslatorAgent().translate(

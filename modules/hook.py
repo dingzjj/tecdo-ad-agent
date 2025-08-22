@@ -48,18 +48,18 @@ def load_app(user_id: str) -> Tuple[str, List[gr.ChatMessage]]:
     # 初始化聊天历史
     chatbot = []
 
-    # 添加欢迎图片
-    welcome_image_path = "/data/dzj/ad_agent/agent/ad_agent/data/tecdo.jpg"
-    if os.path.exists(welcome_image_path):
-        chatbot.append(
-            gr.ChatMessage(role="assistant", content=gr.Image(
-                value=welcome_image_path))
-        )
+    # # 添加欢迎图片
+    # welcome_image_path = "/data/dzj/ad_agent/agent/ad_agent/data/tecdo.jpg"
+    # if os.path.exists(welcome_image_path):
+    #     chatbot.append(
+    #         gr.ChatMessage(role="assistant", content=gr.Image(
+    #             value=welcome_image_path))
+    #     )
 
-    # 添加开始提示
-    chatbot.append(
-        gr.ChatMessage(role="assistant", content=start_hint)
-    )
+    # # 添加开始提示
+    # chatbot.append(
+    #     gr.ChatMessage(role="assistant", content=start_hint)
+    # )
 
     return new_user_id, chatbot
 

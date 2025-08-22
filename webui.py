@@ -202,7 +202,8 @@ def create_v1_image_container(group_num: int):
 with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
     m2v_v1_group_number = gr.State(3)
     m2v_v1_group_img_container_number = gr.State(5)
-
+    # 定义状态变量，用于存储聊天历史
+    chatbot_history = gr.State([])
     with gr.Tab("ad agent"):
         user_material_id = gr.State(1)
 
@@ -210,7 +211,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
             # with gr.Column(scale=1):
             #     gr.Markdown("## 会话管理")
             with gr.Column(scale=2):
-                gr.Markdown("## 聊天区域")
+                gr.Markdown("## ad agent 聊天区域")
                 chatbot = gr.Chatbot(
                     label="聊天记录",
                     value=[],
@@ -221,7 +222,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                 )
 
                 ad_agent_user_input = gr.MultimodalTextbox(
-                    label="",
+                    label=None,
                     placeholder="请输入内容...",
                     file_count="multiple",
                     elem_id="ad_agent_user_input",
@@ -652,7 +653,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
     m2v_v1_generate_btn.click(
         fn=m2v_v1_generate, inputs=(m2v_v1_generate_input),
         outputs=[m2v_v1_video1, m2v_v1_video2, m2v_v1_video3])
-
+    # chatbot_history才是真正的历史信息
     ad_agent_user_input.submit(fn=user_input_func, inputs=[ad_agent_user_input, chatbot], outputs=[chatbot]).then(
         fn=send_message_to_art_ad_agent, inputs=[user_id, ad_agent_user_input, chatbot, user_material_id], outputs=[ad_agent_user_input, chatbot, ad_agent_material_library, user_material_id])
     # ad_agent_file_explorer.change(

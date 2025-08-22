@@ -25,11 +25,9 @@ from agent.ad_agent.art.material_library import material_librarys
 AdAgents: dict[str, AdAgent] = {}
 
 
-def send_message_to_art_ad_agent(user_id, user_input, chatbot, user_material_id):
+def send_message_to_art_ad_agent(user_id, user_input, chatbot, user_material_id, chatbot_history):
     chat_history = gradio_chat_message_list2chat_message_list(chatbot)
-    chat_history.pop(0)
     # 弹出最后一个元素，因为此时chatbot中最后一个元素为用户输入
-    chat_history.pop(-1)
     question = user_input["text"]
     user_files = user_input["files"]
 
@@ -69,13 +67,13 @@ def send_message_to_art_ad_agent(user_id, user_input, chatbot, user_material_id)
     if user_id not in AdAgents:
         AdAgents[user_id] = AdAgent(user_id)
     # TODO 输出 1.任务列表，2、每个子任务 +子任务的执行结果 3.总结果
-    result = AdAgents[user_id].invoke(
-        message=question, overhead_information=overhead_information)
-    # 假如返回的是中断，则返回中断信息
-    # 假如上次中断了，则这次视为对上次中断的恢复
-    chatbot.append(gr.ChatMessage(
-        role="assistant", content=result))
-    return None, chatbot, material_librarys[user_id].return_material_list(), user_material_id
+    for result in AdAgents[user_id].stream(
+            message=question, overhead_information=overhead_information):
+        # 假如返回的是中断，则返回中断信息
+        # 假如上次中断了，则这次视为对上次中断的恢复
+        chatbot.append(gr.ChatMessage(
+            role="assistant", content=result))
+        yield None, chatbot, material_librarys[user_id].return_material_list(), user_material_id
 
 
 # def send_message_to_ad_agent(user_id, user_input, chatbot):

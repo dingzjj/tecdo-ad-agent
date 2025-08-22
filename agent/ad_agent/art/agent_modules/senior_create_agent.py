@@ -1,3 +1,8 @@
+from agent.ad_agent.art.agent_modules.pojo import InterruptInAdAgent
+from langgraph.types import interrupt
+from langchain_core.messages import AIMessage
+from agent.utils import get_time_id
+import os
 from agent.third_part.moviepy_apply import concatenate_videos_from_urls
 from config import conf
 from agent.utils import is_video_file
@@ -28,12 +33,12 @@ from agent.ad_agent.art.agent_modules.store import memory_saver
 
 
 @tool(description="创作脚本时必须调用该工具来创建视频脚本,广告视频脚本")
-def create_script(require: Annotated[str, Field(description="需求，具体需求，例如对脚本的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")],
+def create_script(require: Annotated[str, Field(description="具体需求，例如对脚本的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")],
                   config: RunnableConfig):
     """
     创建视频脚本,广告视频脚本
     """
-    llm = create_azure_gpt5_llm()
+    llm = create_azure_gpt5_llm(name="create_script")
     response = llm.invoke([
         SystemMessage(
             content=CREATE_SCRIPT_PROMPT),
@@ -182,7 +187,7 @@ def merge_video(video_list: Annotated[list[str], Field(description="视频列表
 
         real_video_list.append(video_path)
     output_path = concatenate_videos_from_urls(
-        real_video_list, conf.get_path("temp_dir"))
+        real_video_list, os.path.join(conf.get_path("temp_dir"), get_time_id(), ".mp4"))
     user_id = config["configurable"]["user_id"]
     material_id = material_librarys[user_id].append_material_without_analysis(
         material_path=output_path, title=f"使用{video_list}拼接成的视频")
@@ -194,6 +199,7 @@ class SeniorCreateAgentState(BaseModel):
     messages: list[BaseMessage]
     # 计划列表，包含着子任务，与子任务的执行结果 {"sub_task": "子任务", "result": "子任务的执行结果"}
     plan_list: list[dict] = []
+    need_execute_plan_number: int = 0
 
 
 def manager_context(state: SeniorCreateAgentState):
@@ -207,11 +213,16 @@ def manager_context(state: SeniorCreateAgentState):
 
 def get_tool_list_info():
     tool_list_info = {}
-    tool_list_info[create_script.name] = create_script.args_schema.model_json_schema()
-    tool_list_info[create_image_by_t2i.name] = create_image_by_t2i.args_schema.model_json_schema()
-    tool_list_info[create_video_by_t2v.name] = create_video_by_t2v.args_schema.model_json_schema()
-    tool_list_info[create_video_by_i2v.name] = create_video_by_i2v.args_schema.model_json_schema()
-    tool_list_info[create_image_by_i2i.name] = create_image_by_i2i.args_schema.model_json_schema()
+    tool_list_info[create_script.name] = create_script.args_schema.model_json_schema()[
+        "description"]
+    tool_list_info[create_image_by_t2i.name] = create_image_by_t2i.args_schema.model_json_schema()[
+        "description"]
+    tool_list_info[create_video_by_t2v.name] = create_video_by_t2v.args_schema.model_json_schema()[
+        "description"]
+    tool_list_info[create_video_by_i2v.name] = create_video_by_i2v.args_schema.model_json_schema()[
+        "description"]
+    tool_list_info[create_image_by_i2i.name] = create_image_by_i2i.args_schema.model_json_schema()[
+        "description"]
     return str(tool_list_info)
 
 
@@ -236,43 +247,86 @@ def generate_plan(state: SeniorCreateAgentState, config: RunnableConfig):
     plan_list = json.loads(response.content)
     plan_list = plan_list["plan_list"]
     plan_list = [{"sub_task": plan, "result": None} for plan in plan_list]
-    return {"plan_list": plan_list}
+
+    update_message = AIMessage(content=f"任务列表：{plan_list}")
+    interrupt(InterruptInAdAgent(
+        type="interrupt_generate_plan", message_list=[update_message]))
+    state.messages.append(update_message)
+    # 中断返回
+    return {"plan_list": plan_list, "messages": state.messages, "need_execute_plan_number": len(plan_list)}
+
 
 # TODO: 需要将执行结果加入到plan_list中
+
+
+def interrupt_generate_plan(state: SeniorCreateAgentState, config: RunnableConfig):
+    pass
 
 
 def execute_plan(state: SeniorCreateAgentState, config: RunnableConfig):
     # 执行计划
     # 逐一执行plan_list中的计划
     user_id = config["configurable"]["user_id"]
-    for plan in state.plan_list:
-        execute_plan_agent = create_react_agent(
-            name="senior_create_agent",
-            model=create_azure_gpt5_llm(name="execute_plan"),
-            tools=[create_image_by_t2i, create_video_by_t2v, merge_video,
-                   create_video_by_i2v, create_image_by_i2i, create_script],
-            prompt=(
-                f"""你是一名高级创作代理人员。可以通过调用工具来完成广告，宣传短片等大型创作任务。所有操作尽可能使用工具来完成。输出要尽可能详细，把工具输出结果也写入到输出中。
-                任务列表如下，里面包含子任务，子任务的执行结果：
-                {state.plan_list}
-                """
-            )
+    now_execute_plan_number = len(
+        state.plan_list) - state.need_execute_plan_number
+    plan = state.plan_list[now_execute_plan_number]
+    execute_plan_agent = create_react_agent(
+        name="senior_create_agent",
+        model=create_azure_gpt5_llm(name="execute_plan"),
+        tools=[create_image_by_t2i, create_video_by_t2v, merge_video,
+               create_video_by_i2v, create_image_by_i2i, create_script],
+        prompt=(
+            f"""你是一名高级创作代理人员。可以通过调用工具来完成广告，宣传短片等大型创作任务。所有操作尽可能使用工具来完成。输出要尽可能详细，把工具输出结果也写入到输出中。
+任务列表如下，里面包含子任务，子任务的执行结果：
+{state.plan_list}
+            """
         )
-        response = execute_plan_agent.invoke(
-            {"messages": [HumanMessage(content=f"当前要执行的任务是：{plan["sub_task"]}")]})
-        # 将执行结果加入到plan_list中
-        plan["result"] = response["messages"][-1].content
-    return {"plan_list": state.plan_list}
+    )
+    response = execute_plan_agent.invoke(
+        {"messages": [HumanMessage(content=f"当前要执行的任务是：{plan["sub_task"]}")]})
+    # 将执行结果加入到plan_list中
+    now_task_result: list[BaseMessage] = response["messages"]
+    update_message_list = []
+    for message in now_task_result:
+        if message.content != "":
+            update_message_list.append(AIMessage(content=message.content))
+    interrupt(InterruptInAdAgent(
+        type="interrupt_execute_plan", message_list=update_message_list))
+    state.messages.extend(update_message_list)
+    plan["result"] = response["messages"][-1].content
+    return {"plan_list": state.plan_list, "messages": state.messages, "need_execute_plan_number": state.need_execute_plan_number - 1}
+
+
+def interrupt_execute_plan(state: SeniorCreateAgentState, config: RunnableConfig):
+    pass
+
+
+def if_return_execute_plan(state: SeniorCreateAgentState, config: RunnableConfig):
+    if state.need_execute_plan_number == 0:
+        return True
+    else:
+        return False
 
 
 senior_create_agent = StateGraph(SeniorCreateAgentState)
 senior_create_agent.add_node("manager_context", manager_context)
 senior_create_agent.add_node("generate_plan", generate_plan)
 senior_create_agent.add_node("execute_plan", execute_plan)
+senior_create_agent.add_node(
+    "interrupt_generate_plan", interrupt_generate_plan)
+senior_create_agent.add_node("interrupt_execute_plan", interrupt_execute_plan)
+
+
 senior_create_agent.add_edge(START, "manager_context")
 senior_create_agent.add_edge("manager_context", "generate_plan")
-senior_create_agent.add_edge("generate_plan", "execute_plan")
+senior_create_agent.add_edge("generate_plan", "interrupt_generate_plan")
+senior_create_agent.add_edge("interrupt_generate_plan", "execute_plan")
+senior_create_agent.add_edge("execute_plan", "interrupt_execute_plan")
+senior_create_agent.add_conditional_edges(
+    "interrupt_execute_plan", if_return_execute_plan, {True: "execute_plan", False: END})
+
 senior_create_agent.add_edge("execute_plan", END)
+
 senior_create_agent = senior_create_agent.compile(checkpointer=memory_saver)
 
 
