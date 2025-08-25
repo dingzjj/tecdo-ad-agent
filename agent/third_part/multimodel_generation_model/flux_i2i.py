@@ -1,3 +1,4 @@
+import time
 from agent.utils import get_time_id
 import torch
 from diffusers import FluxKontextPipeline
@@ -36,36 +37,43 @@ async def run_flux_i2i(
     返回:
         List[str]: 所有生成图像的完整路径
     """
+    # 最多重试3次
+    for _ in range(3):
+        try:
+            # 1. 检查输入文件是否存在
+            if not os.path.isfile(input_image_path):
+                raise FileNotFoundError(f"输入图像文件不存在: {input_image_path}")
+            # 2. 提取输入图像的文件名（不带扩展名）
+            # input_image_name = os.path.splitext(os.path.basename(input_image_path))[0]
+            # 3. 确保输出目录存在，否则自动创建
+            os.makedirs(output_dir, exist_ok=True)
+            # 4. 加载模型管道（假设 create_pipe() 已定义）
+            pipe = create_pipe(output_images_num)
+            # if hasattr(torch, "compile"):
+            #     print("启用 torch.compile() 加速...")
+            #     pipe.transformer = torch.compile(pipe.transformer, mode="reduce-overhead")
+            # 6. 加载输入图像
+            input_image = load_image(input_image_path)
+            # 7. 生成图像
+            images = pipe(
+                image=input_image,
+                prompt=prompt,
+                num_images_per_prompt=output_images_num,
+                guidance_scale=guidance_scale,
+            ).images
+            # 8. 保存图像到输出目录
+            output_paths = []
+            for i, img in enumerate(images):
+                # 构造输出文件名：{输入文件名}_output_{编号}.png
+                output_path = os.path.join(output_dir, f"{get_time_id()}.png")
+                img.save(output_path)
+                output_paths.append(output_path)
 
-    # 1. 检查输入文件是否存在
-    if not os.path.isfile(input_image_path):
-        raise FileNotFoundError(f"输入图像文件不存在: {input_image_path}")
-    # 2. 提取输入图像的文件名（不带扩展名）
-    # input_image_name = os.path.splitext(os.path.basename(input_image_path))[0]
-    # 3. 确保输出目录存在，否则自动创建
-    os.makedirs(output_dir, exist_ok=True)
-    # 4. 加载模型管道（假设 create_pipe() 已定义）
-    pipe = create_pipe(output_images_num)
-    # if hasattr(torch, "compile"):
-    #     print("启用 torch.compile() 加速...")
-    #     pipe.transformer = torch.compile(pipe.transformer, mode="reduce-overhead")
-    # 6. 加载输入图像
-    input_image = load_image(input_image_path)
-    # 7. 生成图像
-    images = pipe(
-        image=input_image,
-        prompt=prompt,
-        num_images_per_prompt=output_images_num,
-        guidance_scale=guidance_scale,
-    ).images
-    # 8. 保存图像到输出目录
-    output_paths = []
-    for i, img in enumerate(images):
-        # 构造输出文件名：{输入文件名}_output_{编号}.png
-        output_path = os.path.join(output_dir, f"{get_time_id()}.png")
-        img.save(output_path)
-        output_paths.append(output_path)
-
-    logger.info(
-        f"成功生成 {len(output_paths)} 张图像，已保存至目录: {output_dir}")
-    return output_paths
+            logger.info(
+                f"成功生成 {len(output_paths)} 张图像，已保存至目录: {output_dir}")
+            return output_paths
+        except Exception as e:
+            logger.error(f"生成图像失败: {e}")
+            time.sleep(2)
+            torch.cuda.empty_cache()
+            time.sleep(3)

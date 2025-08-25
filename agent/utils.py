@@ -308,21 +308,15 @@ def get_cuda(need_free_memory: float):
     # 将GB转换为字节
     need_free_memory_bytes = need_free_memory * (1024 ** 3)
 
-    # 检测计数器
-    check_count = 0
-    max_checks = 20
-
-    while check_count < max_checks:
-        check_count += 1
-        logger.info(f"第 {check_count}/{max_checks} 次检测CUDA设备...")
+    for i in range(20):
+        logger.info(f"第 {i+1}/20 次检测CUDA设备...")
 
         # 获取可用的CUDA设备数量
         num_devices = torch.cuda.device_count()
 
         if num_devices == 0:
             logger.warning("未检测到CUDA设备，等待20秒后重试...")
-            if check_count < max_checks:
-                time.sleep(20)
+            time.sleep(20)
             continue
 
         # 检查每个设备的内存
@@ -347,13 +341,14 @@ def get_cuda(need_free_memory: float):
                 return device_id
 
         # 如果没有找到满足要求的设备，等待20秒后重试
-        if check_count < max_checks:
-            logger.info(f"未找到满足要求的CUDA设备（需要 {
-                        need_free_memory:.2f} GB），等待20秒后重试...")
-            time.sleep(20)
+        logger.info(f"未找到满足要求的CUDA设备（需要 {
+                    need_free_memory:.2f} GB），等待20秒后重试...")
+        time.sleep(2)
+        torch.cuda.empty_cache()
+        time.sleep(3)
 
     # 如果20次检测都没找到，抛出异常
-    error_msg = f"经过 {max_checks} 次检测（每次间隔20秒），仍未找到满足要求的CUDA设备（需要 {
+    error_msg = f"经过 20 次检测（每次间隔20秒），仍未找到满足要求的CUDA设备（需要 {
         need_free_memory:.2f} GB）"
     logger.error(error_msg)
     raise RuntimeError(error_msg)

@@ -222,7 +222,7 @@ with gr.Blocks(css_paths=["web_assets/styles.css"]) as demo:
                 )
 
                 ad_agent_user_input = gr.MultimodalTextbox(
-                    label=None,
+                    label="",
                     placeholder="请输入内容...",
                     file_count="multiple",
                     elem_id="ad_agent_user_input",

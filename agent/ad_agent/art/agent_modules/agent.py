@@ -1,4 +1,5 @@
 # 采用reAct框架 不断的调工具 - 直到得出结果（需要工具输出的src比较完善）
+from third_part.language import lan
 from agent.ad_agent.art.agent_modules.pojo import InterruptInAdAgent
 from typing import Literal
 from agent.mini_agent import MaterialAnalyserAgent
@@ -89,11 +90,14 @@ def pretty_print_messages(update, last_message=False):
         print("\n")
 
 
-@tool(description="将任务交给高级创作代理")
+@tool(description="Transfer the task to the senior creative agent.")
 def transfer_to_senior_create_agent(
     state: Annotated[MessagesState, InjectedState],
     tool_call_id: Annotated[str, InjectedToolCallId],
 ) -> Command:
+    """
+    将任务交给高级创作代理
+    """
     tool_message = {
         "role": "tool",
         "content": f"成功将任务交给高级创作代理",
@@ -107,11 +111,14 @@ def transfer_to_senior_create_agent(
     )
 
 
-@tool(description="将任务交给素材管理代理")
+@tool(description="Transfer the task to the material management agent.")
 def transfer_to_material_agent(
     state: Annotated[MessagesState, InjectedState],
     tool_call_id: Annotated[str, InjectedToolCallId],
 ) -> Command:
+    """
+    将任务交给素材管理代理
+    """
     tool_message = {
         "role": "tool",
         "content": f"成功将任务交给素材管理代理",
@@ -125,11 +132,14 @@ def transfer_to_material_agent(
     )
 
 
-@tool(description="将任务交给低级创作代理")
+@tool(description="Transfer the task to the junior creative agent.")
 def transfer_to_junior_create_agent(
     state: Annotated[MessagesState, InjectedState],
     tool_call_id: Annotated[str, InjectedToolCallId],
 ) -> Command:
+    """
+    将任务交给低级创作代理
+    """
     tool_message = {
         "role": "tool",
         "content": f"成功将任务交给低级创作代理",
@@ -170,13 +180,13 @@ class AdAgent:
             tools=[transfer_to_senior_create_agent,
                    transfer_to_material_agent, transfer_to_junior_create_agent],
             prompt=(
-                "您是一名主管，负责管理一名代理人员：\n"
-                "- 一名高级创作代理人员。将广告，宣传短片等大型创作任务分配给该代理人员\n"
-                "- 一名素材管理代理。对需使用的素材进行搜索，上传，预审等任务分配给该代理人员但用户没有特别明确针对于素材搜索，上传，预审需求时，不要分配给该代理人员\n"
-                "- 一名低级创作代理人员。将简单的创作任务分配给该代理人员，例如单个图片，单个视频创作任务，即不涉及多张图片，多段视频的创作任务\n"
-                "每次只安排一名代理人员工作，不要同时呼叫多个代理人员。\n"
-                "您自己不要做任何工作"
-                "输出结果时，不要输出任何其他内容，只输出结果，不要出现代理人员相关信息"
+                "You are a supervisor and are responsible for managing one agent:\n"
+                "- A senior creative agent. Assign large-scale creative tasks such as advertisements and promotional videos to this agent\n"
+                "- A content management agent. Assign tasks such as searching for, uploading, and pre-reviewing the needed content to this agent. However, do not assign these tasks to this agent when the user does not have a specific clear requirement for content search, upload, or pre-review\n"
+                "- A junior creative agent. Assign simple creative tasks to this agent, such as creating a single image or a single video, which do not involve the creation of multiple images or multiple videos\n"
+                "Only one agent should be assigned to work at a time. Do not call multiple agents simultaneously. \n"
+                "Do not do any work yourself."
+                "When outputting the result, do not output any other content. Just output the result and do not include any information about the agents."
             ),
             name="supervisor")
         supervisor = (
@@ -184,8 +194,8 @@ class AdAgent:
             # NOTE: `destinations` is only needed for visualization and doesn't affect runtime behavior
             .add_node(supervisor_agent, destinations=("senior_create_agent", "material_agent", "junior_create_agent", END))
             .add_node("senior_create_agent", return_senior_create_agent())
-            .add_node("material_agent", return_material_agent(self.user_id))
-            .add_node("junior_create_agent", return_junior_create_agent(self.user_id))
+            .add_node("material_agent", return_material_agent())
+            .add_node("junior_create_agent", return_junior_create_agent())
             .add_edge(START, "supervisor")
             # always return back to the supervisor
             .add_edge("senior_create_agent", "supervisor")
@@ -195,8 +205,7 @@ class AdAgent:
         )
         self.supervisor = supervisor
 
-    def stream(self, message: str, overhead_information: dict = {}):
-        result = []
+    def stream(self, message: str, overhead_information: dict = {}) -> list[BaseMessage]:
         """
         调用agent
         :param message: 消息
@@ -204,15 +213,14 @@ class AdAgent:
         :return: 响应
         """
         # 假如有图片，视频上传，先对素材进行分析
-
+        # 进入其中后全部用英文进行交流
+        message = lan(message)
         upload_material_id_list = []
         # 将overhead_information中的图片上传到素材库中
         for upload_material_id, upload_material_info in overhead_information.items():
             upload_material_path = upload_material_info["content"]
             analysis_result = asyncio.run(MaterialAnalyserAgent().analyse_material(
                 material_path=upload_material_path, source="local"))
-            analysis_result = TranslatorAgent().translate(
-                from_lang="English", to_lang="Chinese", text=analysis_result)
             self.material_library.append_material_with_analysis(
                 material_path=upload_material_path, title=upload_material_info["description"], description=analysis_result, analysis_result=analysis_result, id=upload_material_id)
             overhead_information[upload_material_id]["content"] = analysis_result
@@ -220,7 +228,7 @@ class AdAgent:
         # task library
         if len(upload_material_id_list) > 0:
             self.agent_chat_history.append(HumanMessage(
-                content=f"{message}\n上传的素材如下：{overhead_information}"))
+                content=f"{message}\nThe uploaded materials are as follows:{overhead_information}"))
         else:
             self.agent_chat_history.append(HumanMessage(
                 content=f"{message}"))
@@ -269,9 +277,11 @@ class AdAgent:
             with open("/data/dzj/ad_agent/agent/ad_agent/art/agent_modules/agent_chat_history.txt", "w") as f:
                 # 每个元素换行输出
                 for message in self.agent_chat_history:
-                    f.write(str(message)+"\n")
+                    f.write("--------------------------------\n")
+                    f.write(message.content+"\n")
+                    f.write("--------------------------------\n")
             snapshot = self.supervisor.get_state(agent_config)
-            if isinstance(snapshot.interrupts[-1], Interrupt):
+            if len(snapshot.interrupts) > 0:
                 interrupt_message: InterruptInAdAgent = snapshot.interrupts[-1].value
                 if interrupt_message.type == "tool_call":
                     self.is_interrupted = True
@@ -282,4 +292,4 @@ class AdAgent:
                     yield interrupt_message.message_list
             elif isinstance(snapshot.values["messages"][-1], AIMessage):
                 self.is_interrupted = False
-                return snapshot.values["messages"][-1].content
+                return [AIMessage(content=snapshot.values["messages"][-1].content)]

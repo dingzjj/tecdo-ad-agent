@@ -195,7 +195,7 @@ class Veo3:
         }
 
         # 提交任务并获取结果(哪怕报错也不断重试，但最多重试3次)
-        for i in range(3):
+        for _ in range(3):
             try:
                 operation_name = self._submit_generation_task(request_payload)
                 video_path = self._fetch_result(operation_name)
@@ -207,6 +207,7 @@ class Veo3:
                     # 重构提示词
                     positive_prompt = RephrasePromptAgent().rephrase_prompt(
                         positive_prompt)
+                    logger.info(f"重构提示词: {positive_prompt}")
         raise Veo3Error(f"视频生成失败")
 
     async def t2v(self, positive_prompt, negative_prompt, aspect_ratio: Literal["16:9", "9:16"] = "16:9", duration: Literal[8] = 8, resolution: Literal["1080p"] = "1080p", generate_audio=True, sample_count: int = 1, add_watermark: bool = False):

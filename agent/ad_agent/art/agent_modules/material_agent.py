@@ -55,10 +55,10 @@ def upload_material(config: RunnableConfig):
             material_librarys[user_id].append_material_without_analysis(
                 material_path=material_path, title="用户上传的其他文件")
 
-    return "素材上传成功"
+    return "Upload of materials was successful."
 
 
-@tool
+@tool(description="Specify the keyword to search for materials on the web.")
 def get_material_in_web(keyword: Annotated[str, Field(description="关键词")],
                         config: RunnableConfig):
     """
@@ -70,11 +70,11 @@ def get_material_in_web(keyword: Annotated[str, Field(description="关键词")],
     user_id = config["configurable"]["user_id"]
     asyncio.run(
         material_librarys[user_id].crawl_material_in_web(keyword))
-    return "素材爬取成功,请在素材库中查看"
+    return "Material crawling successful, please check in the material library."
 
 
-@tool
-def pre_review_material_in_material_library(material_id: Annotated[str, Field(description="需要预审的素材id,素材库中的素材id的格式为{number}例如1，用户上传的素材id的格式为#{number}例如#1")],
+@tool(description="Specify the material ID to be pre-reviewed, the format of the material ID in the material library is {number} for example 1, and the format of the user uploaded material ID is #{number} for example #1")
+def pre_review_material_in_material_library(material_id: Annotated[str, Field(description="The ID of the material to be pre-reviewed, the format of the material ID in the material library is {number} for example 1, and the format of the user uploaded material ID is #{number} for example #1")],
                                             config: RunnableConfig):
     """
     预审素材,预审素材库中的素材，
@@ -98,8 +98,8 @@ def pre_review_material_in_material_library(material_id: Annotated[str, Field(de
     return result
 
 
-@tool
-def get_material_in_material_library(require: Annotated[str, Field(description="需求，具体需求，例如对素材的具体要求，例如：蓝牙耳机")],
+@tool(description="Specify the requirement to search for materials in the material library.")
+def get_material_in_material_library(require: Annotated[str, Field(description="The specific requirements for the material, such as: Bluetooth headset")],
                                      config: RunnableConfig):
     """
     根据需求从素材库中获取相关的素材
@@ -109,8 +109,8 @@ def get_material_in_material_library(require: Annotated[str, Field(description="
     return result
 
 
-@tool
-def pre_review_material_in_user_input(material_id_list: Annotated[list[str], Field(description="需要进行预审的素材id列表,素材库中的素材id的格式为{number}例如1，用户上传的素材id的格式为#{number}例如#1")],
+@tool(description="Pre-review materials can be used to pre-review user-inputted images, documents, files, or materials in the library. Generally, when users upload images and request pre-review, the system will conduct a pre-review of the images they uploaded.")
+def pre_review_material_in_user_input(material_id_list: Annotated[list[str], Field(description="The list of material IDs to be pre-reviewed, the format of the material ID in the material library is {number} for example 1, and the format of the user uploaded material ID is #{number} for example #1")],
                                       config: RunnableConfig):
     """
     预审素材，既可以预审用户输入的图片，文档，文件,也可以对素材库中的素材进行预审，一般来说用户有进行图片上传并且提出预审需求时会对用户上传的图片进行预审
@@ -123,7 +123,8 @@ def pre_review_material_in_user_input(material_id_list: Annotated[list[str], Fie
             if material_id.startswith("image_"):
                 material = overhead_information[material_id]
                 if material is None:
-                    result += f"您上传的图片{material_id.split('_')[1]}不存在\n"
+                    result += f"The image {material_id.split(
+                        '_')[1]} you uploaded does not exist\n"
                 else:
                     pre_review_result = process_media(
                         media_file=material["content"],
@@ -135,12 +136,13 @@ def pre_review_material_in_user_input(material_id_list: Annotated[list[str], Fie
                         text_input=None,
                         screenshot=None
                     )
-                    result += f"您上传的图片{material_id.split('_')[1]}预审成功,预审结果为{
+                    result += f"The image {material_id.split('_')[1]} you uploaded has been pre-reviewed successfully, the pre-review result is {
                         pre_review_result}\n"
             elif material_id.startswith("video_"):
                 material = overhead_information[material_id]
                 if material is None:
-                    result += f"您上传的视频{material_id.split('_')[1]}不存在\n"
+                    result += f"The video {material_id.split(
+                        '_')[1]} you uploaded does not exist\n"
                 else:
                     pre_review_result = process_media(
                         media_file=material["content"],
@@ -152,7 +154,7 @@ def pre_review_material_in_user_input(material_id_list: Annotated[list[str], Fie
                         text_input=None,
                         screenshot=None
                     )
-                    result += f"您上传的视频{material_id.split('_')[1]}预审成功,预审结果为{
+                    result += f"The video {material_id.split('_')[1]} you uploaded has been pre-reviewed successfully, the pre-review result is {
                         pre_review_result}\n"
             else:
                 material = material_librarys[user_id].get_material_by_id(
@@ -170,18 +172,19 @@ def pre_review_material_in_user_input(material_id_list: Annotated[list[str], Fie
                         text_input=None,
                         screenshot=None
                     )
-                    result += f"素材库中的素材{material_id}预审成功,预审结果为{pre_review_result}\n"
+                    result += f"The material {
+                        material_id} in the material library has been pre-reviewed successfully, the pre-review result is {pre_review_result}\n"
 
     return result
 
 
-def return_material_agent(user_id: str):
-    return  create_react_agent(
-            name="material_agent",
-            model=create_azure_gpt5_llm(),
-            tools=[get_material_from_link, upload_material, get_material_in_web,
-                   pre_review_material_in_material_library, pre_review_material_in_user_input],
-            prompt=(
-                "你是一个素材管理代理,你负责根据用户的需求管理素材,例如根据用户的需求从网上获取素材，上传素材，预审素材等"
-            ),
-        )
+def return_material_agent():
+    return create_react_agent(
+        name="material_agent",
+        model=create_azure_gpt5_llm(),
+        tools=[get_material_from_link, upload_material, get_material_in_web,
+               pre_review_material_in_material_library, pre_review_material_in_user_input],
+        prompt=(
+            "You are a material management agent. You are responsible for managing materials according to user needs, such as obtaining materials from the web, uploading materials, and pre-reviewing materials."
+        ),
+    )

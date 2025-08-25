@@ -1,3 +1,6 @@
+from agent.ad_agent.art.agent_modules.prompt import EXECUTE_PLAN_SYSTEM_PROMPT_EN
+from agent.ad_agent.art.agent_modules.prompt import CREATE_PLAN_PROMPT_EN
+from agent.ad_agent.art.agent_modules.prompt import EXECUTE_PLAN_SYSTEM_PROMPT
 from agent.ad_agent.art.agent_modules.pojo import InterruptInAdAgent
 from langgraph.types import interrupt
 from langchain_core.messages import AIMessage
@@ -32,11 +35,11 @@ from langchain_core.tools import tool
 from agent.ad_agent.art.agent_modules.store import memory_saver
 
 
-@tool(description="创作脚本时必须调用该工具来创建视频脚本,广告视频脚本")
-def create_script(require: Annotated[str, Field(description="具体需求，例如对脚本的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")],
+@tool(description="When creating video scripts, this tool must be used to create them.")
+def create_script(require: Annotated[str, Field(description="Specific requirements for the script")],
                   config: RunnableConfig):
     """
-    创建视频脚本,广告视频脚本
+    创建视频脚本,广告视频脚本,创作视频脚本时必须调用该工具来创建
     """
     llm = create_azure_gpt5_llm(name="create_script")
     response = llm.invoke([
@@ -48,15 +51,13 @@ def create_script(require: Annotated[str, Field(description="具体需求，例�
     return response.content
 
 
-@tool(description="提供对图片的描述，使用text-to-image模型创建图片")
-def create_image_by_t2i(require: Annotated[str, Field(description="需求，具体需求，例如对图片的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")],
+@tool(description="Provide a description of the image and use the text-to-image model to create the image.")
+def create_image_by_t2i(require: Annotated[str, Field(description="For the specific requirements of the picture, please provide the background, characters and actions within the picture.")],
                         config: RunnableConfig):
     """
     提供对图片的描述，使用text-to-image模型创建图片
     """
     # 一切在工具内的都为英文
-    require = TranslatorAgent().translate(
-        from_lang="Chinese", to_lang="English", text=require)
     # 获取最大id
     model_id = model_factory.choose_model_by_specific_function(
         require, "text to image")
@@ -68,19 +69,15 @@ def create_image_by_t2i(require: Annotated[str, Field(description="需求，具�
     user_id = config["configurable"]["user_id"]
     material_id = material_librarys[user_id].append_material_without_analysis(
         material_path=output_path, title=require)
-    return f"生成图片成功,{usage_feedback},生成的图片id为{f'{material_id}'}"
+    return f"The image was successfully generated,{usage_feedback},the generated image id is {f'{material_id}'}"
 
 
-@tool(description="提供对视频的描述，使用text-to-video模型创建视频")
-def create_video_by_t2v(require: Annotated[str, Field(description="需求，具体需求，例如对视频的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")],
+@tool(description="Provide a description of the video and use the text-to-video model to create the video.")
+def create_video_by_t2v(require: Annotated[str, Field(description="For the specific requirements of the video, please provide the background, characters and actions within the video.")],
                         config: RunnableConfig):
     """
     提供对视频的描述，使用text-to-video模型创建视频
     """
-
-    # 一切在工具内的都为英文
-    require = TranslatorAgent().translate(
-        from_lang="Chinese", to_lang="English", text=require)
     model_id = model_factory.choose_model_by_specific_function(
         require, "text to video")
     model = model_factory.get_model_by_id(model_id)
@@ -90,20 +87,17 @@ def create_video_by_t2v(require: Annotated[str, Field(description="需求，具�
     user_id = config["configurable"]["user_id"]
     material_id = material_librarys[user_id].append_material_without_analysis(
         material_path=output_path, title=require)
-    return f"生成视频成功,{usage_feedback},生成的视频id为{f'{material_id}'}"
+    return f"The video was successfully generated,{usage_feedback},the generated video id is {f'{material_id}'}"
 
 
-@tool(description="在需求中指定所用的图片id来生成视频，或者附加信息中有图片上传。使用image-to-video模型创建视频")
-def create_video_by_i2v(require: Annotated[str, Field(description="需求，具体需求，例如对视频的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")],
-                        image_id: Annotated[str, Field(description="图片id，素材库中的素材id的格式为{number}例如1，用户上传的素材id的格式为#{number}例如#1")],
+@tool(description="Specify the image ID to be used in the requirements to generate the video, or there is image upload in the additional information. Use the image-to-video model to create the video.")
+def create_video_by_i2v(require: Annotated[str, Field(description="For the specific requirements of the video, please provide  characters and actions within the video.")],
+                        image_id: Annotated[str, Field(description="The ID of the image in the material library, the format is {number} for example 1, and the format is #{number} for example #1 for user uploaded materials.")],
                         config: RunnableConfig) -> Command:
     """
     在需求中指定所用的图片id来生成视频，或者附加信息中有图片上传。使用image-to-video模型创建视频
     """
     # 一切在工具内的都为英文
-    require = TranslatorAgent().translate(
-        from_lang="Chinese", to_lang="English", text=require)
-
     if image_id.startswith("image"):
         # 使用附加信息上的进行创作
         overhead_information = config["configurable"]["overhead_information"]
@@ -130,20 +124,18 @@ def create_video_by_i2v(require: Annotated[str, Field(description="需求，具�
     user_id = config["configurable"]["user_id"]
     material_id = material_librarys[user_id].append_material_without_analysis(
         material_path=output_path, title=require)
-    return f"使用图片{image_id},{usage_feedback},生成的视频id为{f'{material_id}'}"
+    return f"Using image {image_id},{usage_feedback},the generated video id is {f'{material_id}'}"
 
 
-@tool(description="在需求中指定所用的图片id来生成图片，或者附加信息中有图片上传。使用image-to-image模型创建图片")
-def create_image_by_i2i(positive_prompt: Annotated[str, Field(description="正向提示词，具体需求，例如对图片的具体要求，例如：一个穿着白色连衣裙的女孩在海边跳舞")],
-                        image_id: Annotated[str, Field(description="图片id，素材库中的素材id的格式为{number}例如1，用户上传的素材id的格式为#{number}例如#1")],
+@tool(description="Specify the image ID to be used in the requirements to generate the image, or there is image upload in the additional information. Use the image-to-image model to create the image.")
+def create_image_by_i2i(require: Annotated[str, Field(description="For the specific requirements of the picture, please provide the background, characters and actions within the picture.")],
+                        image_id: Annotated[str, Field(description="The ID of the image in the material library, the format is {number} for example 1, and the format is #{number} for example #1 for user uploaded materials.")],
                         config: RunnableConfig):
     """
     在需求中指定所用的图片id来生成图片，或者附加信息中有图片上传。使用image-to-image模型创建图片
     功能：1.生成某商品的多视角图片 2.对商品图片背景进行修改
     """
     # 一切在工具内的都为英文
-    positive_prompt = TranslatorAgent().translate(
-        from_lang="Chinese", to_lang="English", text=positive_prompt)
     if image_id.startswith("image"):
         # 使用附加信息上的进行创作
         overhead_information = config["configurable"]["overhead_information"]
@@ -160,19 +152,19 @@ def create_image_by_i2i(positive_prompt: Annotated[str, Field(description="正�
         image_path = image.material_path
 
     model_id = model_factory.choose_model_by_specific_function(
-        positive_prompt, "image to image")
+        require, "image to image")
     model = model_factory.get_model_by_id(model_id)
     usage_feedback, output_path = asyncio.run(
-        model.generate(image_path=image_path, positive_prompt=positive_prompt))
+        model.generate(image_path=image_path, positive_prompt=require))
 
     user_id = config["configurable"]["user_id"]
     material_id = material_librarys[user_id].append_material_without_analysis(
-        material_path=output_path, title=positive_prompt)
-    return f"使用图片{image_id},{usage_feedback},生成的图片id为{f'{material_id}'}"
+        material_path=output_path, title=require)
+    return f"Using image {image_id},{usage_feedback},the generated image id is {f'{material_id}'}"
 
 
-@tool(description="将多个视频片段拼接成一个完整的视频")
-def merge_video(video_list: Annotated[list[str], Field(description="视频列表，视频id的格式为{number}例如1，用户上传的素材id的格式为#{number}例如#1")],
+@tool(description="Merge multiple video fragments into a complete video.")
+def merge_video(video_list: Annotated[list[str], Field(description="The list of video IDs, the format is {number} for example 1, and the format is #{number} for example #1 for user uploaded materials.")],
                 config: RunnableConfig):
     """
     将多个视频片段拼接成一个完整的视频
@@ -187,12 +179,12 @@ def merge_video(video_list: Annotated[list[str], Field(description="视频列表
 
         real_video_list.append(video_path)
     output_path = concatenate_videos_from_urls(
-        real_video_list, os.path.join(conf.get_path("temp_dir"), get_time_id(), ".mp4"))
+        real_video_list, os.path.join(conf.get_path("temp_dir"), f"{get_time_id()}.mp4"))
     user_id = config["configurable"]["user_id"]
     material_id = material_librarys[user_id].append_material_without_analysis(
         material_path=output_path, title=f"使用{video_list}拼接成的视频")
     # 将视频列表中的视频拼接成一个完整的视频
-    return f"将多个视频片段拼接成一个完整的视频成功,生成的视频id为{material_id}"
+    return f"Successfully combining multiple video clips into a complete video,the generated video id is {material_id}"
 
 
 class SeniorCreateAgentState(BaseModel):
@@ -200,15 +192,16 @@ class SeniorCreateAgentState(BaseModel):
     # 计划列表，包含着子任务，与子任务的执行结果 {"sub_task": "子任务", "result": "子任务的执行结果"}
     plan_list: list[dict] = []
     need_execute_plan_number: int = 0
+    user_task: str = ""
 
 
 def manager_context(state: SeniorCreateAgentState):
     # 对上下文进行过滤
-    print(state.messages)
     # 删除调用信息
     state.messages.pop()
     state.messages.pop()
-    return {"messages": state.messages}
+    user_task = state.messages[-1].content
+    return {"messages": state.messages, "user_task": user_task}
 
 
 def get_tool_list_info():
@@ -235,28 +228,25 @@ def generate_plan(state: SeniorCreateAgentState, config: RunnableConfig):
     require = state.messages[-1].content
     response = llm.invoke([
         SystemMessage(
-            content=CREATE_PLAN_PROMPT.format(
+            content=CREATE_PLAN_PROMPT_EN.format(
                 tool_list=tool_list_info,
                 expert_knowledge_prompt=plan_library_manager.get_prompt_from_plan_library(
                     "senior_create_agent"),
             )),
         HumanMessage(
-            content=f"需求：{require}")
+            content=f"Requirement: {require}")
     ])
     # 将response.content转换为plan_list
     plan_list = json.loads(response.content)
     plan_list = plan_list["plan_list"]
     plan_list = [{"sub_task": plan, "result": None} for plan in plan_list]
 
-    update_message = AIMessage(content=f"任务列表：{plan_list}")
+    update_message = AIMessage(content=f"Task list: {plan_list}")
     interrupt(InterruptInAdAgent(
         type="interrupt_generate_plan", message_list=[update_message]))
     state.messages.append(update_message)
     # 中断返回
     return {"plan_list": plan_list, "messages": state.messages, "need_execute_plan_number": len(plan_list)}
-
-
-# TODO: 需要将执行结果加入到plan_list中
 
 
 def interrupt_generate_plan(state: SeniorCreateAgentState, config: RunnableConfig):
@@ -270,20 +260,22 @@ def execute_plan(state: SeniorCreateAgentState, config: RunnableConfig):
     now_execute_plan_number = len(
         state.plan_list) - state.need_execute_plan_number
     plan = state.plan_list[now_execute_plan_number]
+    # TODO 增加保险措施避免工具错过
     execute_plan_agent = create_react_agent(
         name="senior_create_agent",
         model=create_azure_gpt5_llm(name="execute_plan"),
-        tools=[create_image_by_t2i, create_video_by_t2v, merge_video,
-               create_video_by_i2v, create_image_by_i2i, create_script],
+        tools=[create_script, create_image_by_t2i, create_video_by_t2v, merge_video,
+               create_video_by_i2v, create_image_by_i2i],
         prompt=(
-            f"""你是一名高级创作代理人员。可以通过调用工具来完成广告，宣传短片等大型创作任务。所有操作尽可能使用工具来完成。输出要尽可能详细，把工具输出结果也写入到输出中。
-任务列表如下，里面包含子任务，子任务的执行结果：
-{state.plan_list}
-            """
+            EXECUTE_PLAN_SYSTEM_PROMPT_EN.format(
+                task=state.user_task,
+                plan_list=state.plan_list
+            )
         )
     )
     response = execute_plan_agent.invoke(
-        {"messages": [HumanMessage(content=f"当前要执行的任务是：{plan["sub_task"]}")]})
+        {"messages": [HumanMessage(content=f"The current task to be executed is: {plan["sub_task"]}")]})
+    # 在这里查看最后是否非工具而没有调用
     # 将执行结果加入到plan_list中
     now_task_result: list[BaseMessage] = response["messages"]
     update_message_list = []
@@ -302,7 +294,7 @@ def interrupt_execute_plan(state: SeniorCreateAgentState, config: RunnableConfig
 
 
 def if_return_execute_plan(state: SeniorCreateAgentState, config: RunnableConfig):
-    if state.need_execute_plan_number == 0:
+    if state.need_execute_plan_number > 0:
         return True
     else:
         return False

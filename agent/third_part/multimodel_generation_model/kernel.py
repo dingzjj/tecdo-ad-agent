@@ -41,6 +41,7 @@ class Gemini2_t2i(MultimodalGenerationModel):
         self.id = "gemini2_t2i"
 
     async def generate(self, **param) -> tuple[str, str]:
+        # TODO 将需求变为提示词
         positive_prompt = param["positive_prompt"]
         if "negative_prompt" in param:
             negative_prompt = param["negative_prompt"]
@@ -54,10 +55,12 @@ class Gemini2_t2i(MultimodalGenerationModel):
 
 
 class Gemini2_i2i(MultimodalGenerationModel):
+
     def __init__(self):
         self.id = "gemini2_i2i"
 
     async def generate(self, **param) -> str:
+        # TODO 将需求变为提示词
         image_path = param["image_path"]
         positive_prompt = param["positive_prompt"]
         if "negative_prompt" in param:
@@ -78,6 +81,7 @@ class Flux_i2i(MultimodalGenerationModel):
         self.id = "flux_i2i"
 
     async def generate(self, **param) -> str:
+        # TODO 将需求变为提示词
         image_path = param["image_path"]
         positive_prompt = param["positive_prompt"]
         if "negative_prompt" in param:
@@ -100,6 +104,7 @@ class Qwen_t2i(MultimodalGenerationModel):
         self.id = "qwen_t2i"
 
     async def generate(self, **param) -> str:
+        # TODO 将需求变为提示词
         positive_prompt = param["positive_prompt"]
         if "negative_prompt" in param:
             negative_prompt = param["negative_prompt"]
@@ -117,6 +122,7 @@ class Kling2_1_i2v(MultimodalGenerationModel):
         self.id = "kling2_1_i2v"
 
     async def generate(self, **param) -> str:
+        # TODO 将需求变为提示词
         image_path = param["image_path"]
 
         # 对图片大小进行判断
@@ -141,6 +147,7 @@ class Wan2_1_t2i(MultimodalGenerationModel):
         self.id = "wan2_1_t2i"
 
     async def generate(self, **param) -> str:
+        # TODO 将需求变为提示词
         positive_prompt = param["positive_prompt"]
         if "negative_prompt" in param:
             negative_prompt = param["negative_prompt"]
@@ -157,6 +164,7 @@ class Veo3_t2v(MultimodalGenerationModel):
         self.id = "veo3_t2v"
 
     async def generate(self, **param) -> str:
+        # TODO 将需求变为提示词
         positive_prompt = param["positive_prompt"]
         if "negative_prompt" in param:
             negative_prompt = param["negative_prompt"]
@@ -174,6 +182,7 @@ class Veo3_i2v(MultimodalGenerationModel):
         self.id = "veo3_i2v"
 
     async def generate(self, **param) -> str:
+        # TODO 将需求变为提示词
         image_path = param["image_path"]
         positive_prompt = param["positive_prompt"]
         if "negative_prompt" in param:
@@ -194,6 +203,7 @@ class SDXL_MV_Adapter(MultimodalGenerationModel):
         self.id = "sdxl_mv_adapter_i2i"
 
     async def generate(self, **param) -> str:
+        # TODO 将需求变为提示词
         image_path = param["image_path"]
         positive_prompt = param["positive_prompt"]
         if "negative_prompt" in param:
