@@ -1,3 +1,5 @@
+from typing import Optional
+from config import conf
 from crawl4ai import AsyncWebCrawler
 import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout
@@ -5,34 +7,41 @@ import matplotlib.pyplot as plt
 # from config import conf
 from agent.llm import chat_with_openai_in_azure
 
-# 定位某个节点，根据 'name' 属性
+# 全球为None
+from config import logger
 
 
-def from_one_node_to_all_nodes(G, node_name: str) -> list[str]:
+def from_one_node_to_all_nodes(G, node_name: str) -> set[str]:
     if G.out_degree(node_name) == 0:
-        return [node_name]
-    result = []
-    successors = list(G.successors(node_name))
+        return {node_name}
+    result = set()
+    successors = set(G.successors(node_name))
     for successor in successors:
-        result.extend(from_one_node_to_all_nodes(G, successor))
+        result.update(from_one_node_to_all_nodes(G, successor))
     return result
 
 
-def get_country_from_natural_language(natural_language: str) -> list[str]:
+def get_country_from_natural_language(natural_language: str, point: Optional[str] = None) -> list[str]:
+    """
+    返回[]时即不加地区限制
+    """
+
     # 从自然语言中找到地区，否则默认为全球
     # 1.节点匹配(中文)
-    result = []
+    result = set()
     G = nx.DiGraph(nx.nx_pydot.read_dot(
-        "./agent/material_insights_agent/country.gv"))
-    matches = [s for s in G.nodes() if s in natural_language]
+        conf.get_path("material_insights_agent.country_graph_path")))
+    if point:
+        matches = [s for s in G.nodes() if s in point]
+    else:
+        matches = [s for s in G.nodes() if s in natural_language]
     if matches:
         # 一直往下
         for match in matches:
-            result.extend(from_one_node_to_all_nodes(G, match))
-        return result
+            result.update(from_one_node_to_all_nodes(G, match))
+        return list(result)
     # 2.LLM匹配
     global_nodes = G.nodes()
-    print(global_nodes)
     system_prompt = """
     你是一个专业的地理知识专家，请根据用户输入的自然语言，找到对应的地区。如果用户输入的自然语言中包含地区，请返回一个最匹配的地区。
     可以匹配的节点有：{global_nodes}
@@ -43,15 +52,9 @@ def get_country_from_natural_language(natural_language: str) -> list[str]:
     response = chat_with_openai_in_azure(system_prompt, prompt)
 
     if response and response in global_nodes:
-        return from_one_node_to_all_nodes(G, response)
+        return list(from_one_node_to_all_nodes(G, response))
     else:
+        logger.warning(f"No country found for {
+                       natural_language} and response is {response}")
         # 默认全球
-        return global_nodes
-
-
-async def crawl_from_creativault(keyword: str, country: list[str]):
-    async with AsyncWebCrawler() as crawler:
-        # Run the crawler on a URL
-        result = await crawler.arun(url="https://creativault.tec-do.com/materials/search")
-        # Print the extracted content
-        print(result.markdown)
+        return []
