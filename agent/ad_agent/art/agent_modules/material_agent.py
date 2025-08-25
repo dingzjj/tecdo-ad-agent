@@ -83,9 +83,9 @@ def pre_review_material_in_material_library(material_id: Annotated[str, Field(de
     material_path = material_librarys[user_id].get_material_by_id(
         material_id)
     if material_path is None:
-        return f"素材{material_id}不存在"
+        return f"The material {material_id} does not exist"
     if not (is_image_file(material_path) or is_video_file(material_path)):
-        return f"素材{material_id}不是图片或视频"
+        return f"The material {material_id} is not an image or video"
     result = process_media(
         media_file=material_path,
         MEDIASHIELD_GEMINI_API_KEY=conf.get(
@@ -117,7 +117,7 @@ def pre_review_material_in_user_input(material_id_list: Annotated[list[str], Fie
     """
     user_id = config["configurable"]["user_id"]
     overhead_information = config["configurable"]["overhead_information"]
-    result = "预审结果如下：\n"
+    result = "The preliminary review results are as follows:\n"
     if len(material_id_list) > 0:
         for material_id in material_id_list:
             if material_id.startswith("image_"):
@@ -160,7 +160,7 @@ def pre_review_material_in_user_input(material_id_list: Annotated[list[str], Fie
                 material = material_librarys[user_id].get_material_by_id(
                     material_id)
                 if material is None:
-                    result += f"素材{material_id}不存在\n"
+                    result += f"The material {material_id} does not exist\n"
                 else:
                     pre_review_result = process_media(
                         media_file=material.material_path,

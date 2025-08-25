@@ -9,8 +9,6 @@ import json
 from agent.third_part.multimodel_generation_model.kernel import model_factory
 from pydantic import Field
 from typing import Annotated
-from agent.mini_agent import TranslatorAgent
-from agent.ad_agent.art.agent_modules.prompt import CREATE_SCRIPT_PROMPT
 from langchain_core.tools import tool
 
 # 低级创作代理人员 可以完成单个图片，单个视频创作任务，但每次创作任务都弹出提示框，询问是否需要继续创作
